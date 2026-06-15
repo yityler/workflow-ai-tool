@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UI Sound Test</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="control-panel" aria-labelledby="page-title">
+      <div class="title-row">
+        <div>
+          <p class="eyebrow">Week 1 UI Test</p>
+          <h1 id="page-title">Sound Button Recorder</h1>
+        </div>
+        <div class="status" id="save-status" aria-live="polite">Dataset ready</div>
+      </div>
+
+      <div class="button-grid" id="sound-buttons" aria-label="Sound buttons"></div>
+
+      <div class="actions">
+        <button class="utility-button" id="connect-file" type="button">Connect Dataset File</button>
+        <button class="utility-button" id="download-data" type="button">Download Dataset</button>
+        <button class="utility-button danger" id="reset-data" type="button">Reset Data</button>
+      </div>
+    </section>
+
+    <section class="dataset-panel" aria-labelledby="dataset-title">
+      <div class="panel-header">
+        <h2 id="dataset-title">UI_TEST_DATASET.txt</h2>
+      </div>
+      <div class="dataset-card">
+        <p id="dataset-message">Dataset ready</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
