@@ -9,7 +9,7 @@
 
 > All three models were called through OpenAI-compatible chat-completions endpoints — `gpt-oss-20b` and `Llama-3.1-8B` via NVIDIA NIM, and `Phi-4-mini-instruct` captured against an earlier NVIDIA NIM configuration (before it was later moved to GitHub Models).
 
-For background on licensing, pros/cons, and hardware requirements for each model, see the [main writeup](README.md). Cost comparisons across providers are [here](pricing.md).
+For background on licensing, pros/cons, and hardware requirements for each model, see the [Week 1 Markdown](Ozzy/Week 1 - AI Model Research/aimodelresearch.mdOzzy/Week 1 - AI Model Research/aimodelresearch.md). Cost comparisons across providers are [here](Ozzy\Week 1 - AI Model Research\pricing.md).
 
 ### Contents
 * [Gradio / Stopwords](#Gradio/Stopwords)
@@ -27,12 +27,9 @@ Three prompts were sent to each model, each asking for a fairly large, code-heav
 
 | # | Prompt | Topic |
 | :-: | :--- | :--- |
-| 1 | "Design a modern, responsive website for a [business type]. Include a homepage with hero section, services, testimonials, and CTA; plus About, Services, and Contact pages. Use clean UI, mobile-first layout, smooth animations, SEO-friendly structure, and accessible design. Generate complete HTML/CSS/JS (or React) code with organized components and production-ready styling.
-" | Full website (HTML/CSS/JS or React) |
-| 2 | "Write a Python program that implements a fully playable chess game. Use clean OOP design, a board representation, and enforce official chess rules (legal moves, check, checkmate, castling, en passant, promotion). Include a simple UI (console or Pygame), move validation, game state tracking, and an option for AI opponent with basic strategy.
-" | Chess engine with OOP design |
-| 3 | "Create a Python application that analyzes and visualizes real-world weather data. Use an external API to fetch current and historical weather for any user-specified city. Process the data to display trends like temperature changes, humidity, and precipitation. Build a clean CLI or simple web interface, include error handling, caching for efficiency, and generate interactive charts using a plotting library. Ensure the code is modular, well-documented, and easy to extend for future features like forecasting or alerts.
-" | Weather CLI/web app |
+| 1 | Design a modern, responsive website for a [business type]. Include a homepage with hero section, services, testimonials, and CTA; plus About, Services, and Contact pages. Use clean UI, mobile-first layout, smooth animations, SEO-friendly structure, and accessible design. Generate complete HTML/CSS/JS (or React) code with organized components and production-ready styling.| Full website (HTML/CSS/JS or React) |
+| 2 | Write a Python program that implements a fully playable chess game. Use clean OOP design, a board representation, and enforce official chess rules (legal moves, check, checkmate, castling, en passant, promotion). Include a simple UI (console or Pygame), move validation, game state tracking, and an option for AI opponent with basic strategy.| Chess engine with OOP design |
+| 3 | Create a Python application that analyzes and visualizes real-world weather data. Use an external API to fetch current and historical weather for any user-specified city. Process the data to display trends like temperature changes, humidity, and precipitation. Build a clean CLI or simple web interface, include error handling, caching for efficiency, and generate interactive charts using a plotting library. Ensure the code is modular, well-documented, and easy to extend for future features like forecasting or alerts.| Weather CLI/web app |
 
 Each prompt was sent twice per model — once as-is (**unfiltered**) and once with stopwords removed (**filtered**) — for 6 calls per model, 18 calls total. For every call I logged prompt tokens, completion tokens, `finish_reason`, and wall-clock time.
 
