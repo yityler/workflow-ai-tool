@@ -1,0 +1,56 @@
+import os
+
+import gradio as gr
+from groq import Groq
+
+# Set your key in the environment: export GROQ_API_KEY="your-key-here"
+DEFAULT_MODELS = [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
+    "mixtral-8x7b-32768",
+    "gemma2-9b-it",
+]
+
+
+def call_groq(prompt: str, model: str) -> str:
+    api_key = os.environ.get("GROQ_API_KEY")
+    if not api_key:
+        return (
+            "Missing GROQ_API_KEY. Set it before running, e.g.:\n"
+            '  export GROQ_API_KEY="your-api-key"'
+        )
+    if not (prompt or "").strip():
+        return "Enter a prompt above."
+
+    client = Groq(api_key=api_key)
+    completion = client.chat.completions.create(
+        messages=[{"role": "user", "content": prompt.strip()}],
+        model=model,
+    )
+    return completion.choices[0].message.content or ""
+
+
+def build_ui() -> gr.Blocks:
+    with gr.Blocks(title="Groq chat") as demo:
+        gr.Markdown("# Groq chat\nEnter a prompt and choose a model.")
+        with gr.Row():
+            prompt = gr.Textbox(
+                label="Prompt",
+                placeholder="Ask something…",
+                lines=6,
+            )
+        model = gr.Dropdown(
+            choices=DEFAULT_MODELS,
+            value=DEFAULT_MODELS[0],
+            label="Model",
+            allow_custom_value=True,
+        )
+        out = gr.Textbox(label="Response", lines=12)
+        submit = gr.Button("Send")
+        submit.click(fn=call_groq, inputs=[prompt, model], outputs=out)
+        prompt.submit(fn=call_groq, inputs=[prompt, model], outputs=out)
+    return demo
+
+
+if __name__ == "__main__":
+    build_ui().launch()
