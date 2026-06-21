@@ -22,6 +22,6 @@ The main weakness is that the responses are less technically deep than DeepSeek'
 
 ## Score
 
-**Overall score: 8.5/10**
+**Overall score: 8.8/10**
 
 ChatGPT appears strong for product strategy, UX design, and requirements writing for the Workflow Generator Tool. It would do well, but may need a more technical partner for detailed system architecture.

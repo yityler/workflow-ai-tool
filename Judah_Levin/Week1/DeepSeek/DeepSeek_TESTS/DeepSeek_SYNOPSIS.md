@@ -22,6 +22,6 @@ The main weakness is that some answers are dense and could be harder for a non-t
 
 ## Score
 
-**Overall score: 9.4/10**
+**Overall score: 8.7/10**
 
 DeepSeek appears very strong for designing an AI agent that anticipates user behavior and integrates predictive models into a real-time Workflow Generator Tool.

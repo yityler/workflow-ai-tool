@@ -1,0 +1,792 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Element Planner</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f5ef;
+      --panel: #ffffff;
+      --panel-soft: #f0f7f4;
+      --ink: #1d2522;
+      --muted: #60706a;
+      --line: #d8ded8;
+      --accent: #176b5d;
+      --accent-dark: #0f4d43;
+      --accent-soft: #dff0eb;
+      --warn: #a9432f;
+      --shadow: 0 14px 42px rgba(29, 37, 34, 0.1);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.68), rgba(255,255,255,0)) 0 0 / 100% 280px no-repeat,
+        var(--bg);
+      color: var(--ink);
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+      min-height: 40px;
+      padding: 0 14px;
+      transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
+    }
+
+    button:hover {
+      background: var(--accent-dark);
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    button.secondary {
+      background: white;
+      border-color: var(--line);
+      color: var(--ink);
+    }
+
+    button.secondary:hover {
+      background: var(--panel-soft);
+      border-color: #b8cbc4;
+    }
+
+    button.icon {
+      align-items: center;
+      display: inline-flex;
+      justify-content: center;
+      min-width: 40px;
+      padding: 0;
+    }
+
+    button.danger {
+      background: #fff7f4;
+      border-color: #efc8be;
+      color: var(--warn);
+    }
+
+    button.danger:hover {
+      background: #ffe9e2;
+    }
+
+    .app {
+      display: grid;
+      gap: 22px;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      margin: 0 auto;
+      max-width: 1320px;
+      padding: 28px;
+    }
+
+    header {
+      align-items: end;
+      display: flex;
+      gap: 18px;
+      grid-column: 1 / -1;
+      justify-content: space-between;
+      min-width: 0;
+    }
+
+    .title-block {
+      min-width: 0;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 4vw, 4rem);
+      line-height: 0.96;
+      letter-spacing: 0;
+      margin: 0 0 12px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.5;
+      margin: 0;
+      max-width: 680px;
+    }
+
+    .header-actions,
+    .toolbar {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .workspace,
+    .inspector {
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid rgba(216, 222, 216, 0.86);
+      box-shadow: var(--shadow);
+    }
+
+    .workspace {
+      border-radius: 8px;
+      min-height: 680px;
+      overflow: hidden;
+    }
+
+    .toolbar {
+      background: white;
+      border-bottom: 1px solid var(--line);
+      justify-content: space-between;
+      padding: 14px;
+    }
+
+    .toolbar-left {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .search {
+      background: #f9fbfa;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      min-height: 40px;
+      min-width: min(360px, 100%);
+      padding: 0 12px;
+    }
+
+    .list {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+    }
+
+    .empty {
+      align-items: center;
+      color: var(--muted);
+      display: grid;
+      min-height: 460px;
+      place-items: center;
+      text-align: center;
+    }
+
+    .empty-inner {
+      max-width: 420px;
+    }
+
+    .empty h2 {
+      color: var(--ink);
+      font-size: 1.6rem;
+      margin: 0 0 8px;
+    }
+
+    .element {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+    }
+
+    .element.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .element-head {
+      align-items: start;
+      display: grid;
+      gap: 12px;
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .element-title {
+      align-items: center;
+      display: flex;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    .type-chip {
+      background: var(--accent-soft);
+      border-radius: 999px;
+      color: var(--accent-dark);
+      flex: 0 0 auto;
+      font-size: 0.76rem;
+      font-weight: 700;
+      padding: 4px 9px;
+      text-transform: uppercase;
+    }
+
+    .element h3 {
+      font-size: 1.08rem;
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .description {
+      color: var(--muted);
+      line-height: 1.45;
+      margin: 0;
+      white-space: pre-wrap;
+    }
+
+    .meta-row {
+      align-items: center;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      font-size: 0.86rem;
+      gap: 10px;
+    }
+
+    .children {
+      border-left: 2px solid var(--accent-soft);
+      display: grid;
+      gap: 10px;
+      margin-left: 8px;
+      padding-left: 14px;
+    }
+
+    .child {
+      background: #fbfcfb;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .child .element-head {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .inspector {
+      align-self: start;
+      border-radius: 8px;
+      padding: 18px;
+      position: sticky;
+      top: 18px;
+    }
+
+    .inspector h2 {
+      font-size: 1.12rem;
+      margin: 0 0 4px;
+    }
+
+    .inspector p {
+      color: var(--muted);
+      line-height: 1.45;
+      margin: 0 0 18px;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      margin-bottom: 14px;
+    }
+
+    label {
+      color: #36443f;
+      font-size: 0.84rem;
+      font-weight: 700;
+    }
+
+    input,
+    textarea,
+    select {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--ink);
+      min-height: 42px;
+      padding: 10px 12px;
+      width: 100%;
+    }
+
+    textarea {
+      min-height: 104px;
+      resize: vertical;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+      outline: none;
+    }
+
+    .inspector-actions {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: 1fr 1fr;
+      margin-top: 16px;
+    }
+
+    .inspector-actions .wide {
+      grid-column: 1 / -1;
+    }
+
+    .sr-only {
+      border: 0;
+      clip: rect(0, 0, 0, 0);
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      padding: 0;
+      position: absolute;
+      width: 1px;
+    }
+
+    .toast {
+      background: #1d2522;
+      border-radius: 8px;
+      bottom: 18px;
+      color: white;
+      left: 50%;
+      opacity: 0;
+      padding: 12px 16px;
+      pointer-events: none;
+      position: fixed;
+      transform: translate(-50%, 12px);
+      transition: opacity 180ms ease, transform 180ms ease;
+      z-index: 10;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    @media (max-width: 980px) {
+      .app {
+        grid-template-columns: 1fr;
+        padding: 20px;
+      }
+
+      header {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .header-actions {
+        justify-content: flex-start;
+      }
+
+      .inspector {
+        position: static;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .app {
+        padding: 14px;
+      }
+
+      .toolbar,
+      .toolbar-left,
+      .header-actions {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      button,
+      .search {
+        width: 100%;
+      }
+
+      .element-head {
+        grid-template-columns: 1fr;
+      }
+
+      .element-head .header-actions {
+        flex-direction: row;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div class="title-block">
+        <h1>Element Planner</h1>
+        <p class="subtitle">Sketch high-level planning elements, add nested child items, and keep the configuration in your browser or as a JSON file.</p>
+      </div>
+      <div class="header-actions">
+        <button id="saveLocalBtn" type="button">Save Local</button>
+        <button id="exportBtn" class="secondary" type="button">Export JSON</button>
+        <button id="importBtn" class="secondary" type="button">Import JSON</button>
+        <input id="importFile" class="sr-only" type="file" accept="application/json,.json">
+      </div>
+    </header>
+
+    <section class="workspace" aria-label="Planning elements">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <button id="addTopBtn" type="button">Add Top-Level Element</button>
+          <input id="searchInput" class="search" type="search" placeholder="Search labels, descriptions, or details">
+        </div>
+        <button id="clearBtn" class="danger" type="button">Clear All</button>
+      </div>
+      <div id="list" class="list"></div>
+    </section>
+
+    <aside class="inspector" aria-label="Element editor">
+      <h2 id="inspectorTitle">Add an element</h2>
+      <p id="inspectorHint">Create a top-level element, then add child details as your plan takes shape.</p>
+      <form id="elementForm">
+        <div class="field">
+          <label for="parentSelect">Parent</label>
+          <select id="parentSelect"></select>
+        </div>
+        <div class="field">
+          <label for="labelInput">Label</label>
+          <input id="labelInput" type="text" placeholder="Example: Discovery workflow" required>
+        </div>
+        <div class="field">
+          <label for="descriptionInput">Description</label>
+          <textarea id="descriptionInput" placeholder="What is this element for?"></textarea>
+        </div>
+        <div class="field">
+          <label for="detailsInput">Details</label>
+          <textarea id="detailsInput" placeholder="Notes, constraints, owners, acceptance criteria, open questions..."></textarea>
+        </div>
+        <div class="inspector-actions">
+          <button id="submitBtn" type="submit">Add Element</button>
+          <button id="resetBtn" class="secondary" type="button">New</button>
+          <button id="deleteBtn" class="danger wide" type="button" hidden>Delete Selected</button>
+        </div>
+      </form>
+    </aside>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const STORAGE_KEY = "element-planner-config-v1";
+    const state = {
+      elements: [],
+      selectedId: null,
+      editingId: null,
+      search: ""
+    };
+
+    const els = {
+      addTopBtn: document.getElementById("addTopBtn"),
+      clearBtn: document.getElementById("clearBtn"),
+      deleteBtn: document.getElementById("deleteBtn"),
+      descriptionInput: document.getElementById("descriptionInput"),
+      detailsInput: document.getElementById("detailsInput"),
+      elementForm: document.getElementById("elementForm"),
+      exportBtn: document.getElementById("exportBtn"),
+      importBtn: document.getElementById("importBtn"),
+      importFile: document.getElementById("importFile"),
+      inspectorHint: document.getElementById("inspectorHint"),
+      inspectorTitle: document.getElementById("inspectorTitle"),
+      labelInput: document.getElementById("labelInput"),
+      list: document.getElementById("list"),
+      parentSelect: document.getElementById("parentSelect"),
+      resetBtn: document.getElementById("resetBtn"),
+      saveLocalBtn: document.getElementById("saveLocalBtn"),
+      searchInput: document.getElementById("searchInput"),
+      submitBtn: document.getElementById("submitBtn"),
+      toast: document.getElementById("toast")
+    };
+
+    function createId() {
+      if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+      return `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+    }
+
+    const sampleData = [
+      {
+        id: createId(),
+        label: "Prototype goals",
+        description: "Define the first version of the planning UI.",
+        details: "Keep it local, editable, and easy to export.",
+        children: [
+          {
+            id: createId(),
+            label: "Configuration JSON",
+            description: "Save and restore planning structure.",
+            details: "Support localStorage, import, and export.",
+            children: []
+          }
+        ]
+      }
+    ];
+
+    function showToast(message) {
+      els.toast.textContent = message;
+      els.toast.classList.add("show");
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => els.toast.classList.remove("show"), 1800);
+    }
+
+    function getConfig() {
+      return {
+        version: 1,
+        savedAt: new Date().toISOString(),
+        elements: state.elements
+      };
+    }
+
+    function saveToLocal() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(getConfig(), null, 2));
+      showToast("Configuration saved locally");
+    }
+
+    function loadFromLocal() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) {
+        state.elements = sampleData;
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(saved);
+        state.elements = Array.isArray(parsed.elements) ? parsed.elements : [];
+      } catch {
+        state.elements = sampleData;
+        showToast("Saved data could not be read, so sample data was loaded");
+      }
+    }
+
+    function flatten(elements = state.elements, depth = 0, parentId = "") {
+      return elements.flatMap((item) => [
+        { item, depth, parentId },
+        ...flatten(item.children || [], depth + 1, item.id)
+      ]);
+    }
+
+    function findElement(id, elements = state.elements, parent = null) {
+      for (const item of elements) {
+        if (item.id === id) return { item, parent, siblings: elements };
+        const found = findElement(id, item.children || [], item);
+        if (found) return found;
+      }
+      return null;
+    }
+
+    function removeElement(id, elements = state.elements) {
+      const index = elements.findIndex((item) => item.id === id);
+      if (index >= 0) {
+        elements.splice(index, 1);
+        return true;
+      }
+      return elements.some((item) => removeElement(id, item.children || []));
+    }
+
+    function matchesSearch(item) {
+      if (!state.search) return true;
+      const haystack = `${item.label} ${item.description} ${item.details}`.toLowerCase();
+      const childMatch = (item.children || []).some(matchesSearch);
+      return haystack.includes(state.search) || childMatch;
+    }
+
+    function renderParentOptions() {
+      const current = state.editingId;
+      const options = ['<option value="">Top-level element</option>'];
+      flatten().forEach(({ item, depth }) => {
+        if (item.id === current || isDescendant(current, item.id)) return;
+        const prefix = depth ? `${"".padStart(depth * 2, "-")} ` : "";
+        options.push(`<option value="${item.id}">${prefix}${escapeHtml(item.label)}</option>`);
+      });
+      els.parentSelect.innerHTML = options.join("");
+    }
+
+    function isDescendant(parentId, childId) {
+      if (!parentId) return false;
+      const parent = findElement(parentId)?.item;
+      if (!parent) return false;
+      return flatten(parent.children || []).some(({ item }) => item.id === childId);
+    }
+
+    function renderList() {
+      const visible = state.elements.filter(matchesSearch);
+
+      if (!visible.length) {
+        els.list.innerHTML = `
+          <div class="empty">
+            <div class="empty-inner">
+              <h2>${state.elements.length ? "No matching elements" : "Start with a top-level element"}</h2>
+              <p>${state.elements.length ? "Try a different search term or add another planning item." : "Use the editor or the Add Top-Level Element button to begin shaping your plan."}</p>
+            </div>
+          </div>`;
+        return;
+      }
+
+      els.list.innerHTML = visible.map((item) => renderElement(item, 0)).join("");
+    }
+
+    function renderElement(item, depth) {
+      const children = (item.children || []).filter(matchesSearch);
+      const selected = state.selectedId === item.id ? " selected" : "";
+      const type = depth === 0 ? "Top level" : "Child";
+      return `
+        <article class="element${selected}" data-id="${item.id}">
+          <div class="element-head">
+            <div>
+              <div class="element-title">
+                <span class="type-chip">${type}</span>
+                <h3>${escapeHtml(item.label || "Untitled")}</h3>
+              </div>
+              ${item.description ? `<p class="description">${escapeHtml(item.description)}</p>` : ""}
+            </div>
+            <div class="header-actions">
+              <button class="secondary icon" type="button" data-action="add-child" data-id="${item.id}" title="Add child">+</button>
+              <button class="secondary icon" type="button" data-action="edit" data-id="${item.id}" title="Edit">✎</button>
+            </div>
+          </div>
+          ${item.details ? `<p class="description">${escapeHtml(item.details)}</p>` : ""}
+          <div class="meta-row">
+            <span>${children.length} child${children.length === 1 ? "" : "ren"}</span>
+          </div>
+          ${children.length ? `<div class="children">${children.map((child) => `<div class="child">${renderElement(child, depth + 1)}</div>`).join("")}</div>` : ""}
+        </article>`;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[char]));
+    }
+
+    function resetForm(parentId = "") {
+      state.editingId = null;
+      state.selectedId = null;
+      els.elementForm.reset();
+      renderParentOptions();
+      els.parentSelect.value = parentId;
+      els.inspectorTitle.textContent = parentId ? "Add a child element" : "Add an element";
+      els.inspectorHint.textContent = parentId ? "This child will sit under the selected planning element." : "Create a top-level element, then add child details as your plan takes shape.";
+      els.submitBtn.textContent = "Add Element";
+      els.deleteBtn.hidden = true;
+      renderList();
+    }
+
+    function editElement(id) {
+      const found = findElement(id);
+      if (!found) return;
+      state.editingId = id;
+      state.selectedId = id;
+      renderParentOptions();
+      els.parentSelect.value = found.parent?.id || "";
+      els.labelInput.value = found.item.label || "";
+      els.descriptionInput.value = found.item.description || "";
+      els.detailsInput.value = found.item.details || "";
+      els.inspectorTitle.textContent = "Edit element";
+      els.inspectorHint.textContent = "Update the selected item or move it under another parent.";
+      els.submitBtn.textContent = "Save Changes";
+      els.deleteBtn.hidden = false;
+      renderList();
+    }
+
+    function upsertElement(event) {
+      event.preventDefault();
+      const parentId = els.parentSelect.value;
+      const payload = {
+        id: state.editingId || createId(),
+        label: els.labelInput.value.trim(),
+        description: els.descriptionInput.value.trim(),
+        details: els.detailsInput.value.trim(),
+        children: state.editingId ? findElement(state.editingId)?.item.children || [] : []
+      };
+
+      if (!payload.label) {
+        els.labelInput.focus();
+        return;
+      }
+
+      if (state.editingId) removeElement(state.editingId);
+
+      const target = parentId ? findElement(parentId)?.item.children : state.elements;
+      target.push(payload);
+      saveToLocal();
+      resetForm(parentId);
+    }
+
+    function exportJson() {
+      const blob = new Blob([JSON.stringify(getConfig(), null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `element-planner-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      showToast("JSON export created");
+    }
+
+    function importJson(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(reader.result);
+          if (!Array.isArray(parsed.elements)) throw new Error("Missing elements array");
+          state.elements = parsed.elements;
+          saveToLocal();
+          resetForm();
+          showToast("JSON imported");
+        } catch {
+          showToast("That JSON file does not match this planner format");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    els.addTopBtn.addEventListener("click", () => resetForm(""));
+    els.clearBtn.addEventListener("click", () => {
+      if (!state.elements.length || !confirm("Clear all planning elements?")) return;
+      state.elements = [];
+      saveToLocal();
+      resetForm();
+    });
+    els.deleteBtn.addEventListener("click", () => {
+      if (!state.editingId || !confirm("Delete the selected element and its children?")) return;
+      removeElement(state.editingId);
+      saveToLocal();
+      resetForm();
+    });
+    els.elementForm.addEventListener("submit", upsertElement);
+    els.exportBtn.addEventListener("click", exportJson);
+    els.importBtn.addEventListener("click", () => els.importFile.click());
+    els.importFile.addEventListener("change", (event) => importJson(event.target.files[0]));
+    els.list.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-action]");
+      if (!button) return;
+      const id = button.dataset.id;
+      if (button.dataset.action === "edit") editElement(id);
+      if (button.dataset.action === "add-child") resetForm(id);
+    });
+    els.resetBtn.addEventListener("click", () => resetForm());
+    els.saveLocalBtn.addEventListener("click", saveToLocal);
+    els.searchInput.addEventListener("input", (event) => {
+      state.search = event.target.value.trim().toLowerCase();
+      renderList();
+    });
+
+    loadFromLocal();
+    renderParentOptions();
+    renderList();
+  </script>
+</body>
+</html>
