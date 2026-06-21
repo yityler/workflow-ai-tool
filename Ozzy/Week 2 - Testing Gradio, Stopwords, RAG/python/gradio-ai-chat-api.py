@@ -103,13 +103,20 @@ def call_api_chat(messages):
         if nvidia_client is None:
             raise RuntimeError("No NVIDIA API key set. Enter your key above and click Save Token.")
         active_client = nvidia_client
-
-    response = active_client.chat.completions.create(
-        model=route['model_id'],
-        messages=messages,
-        max_tokens=1024,
-        temperature=0.7,
-    )
+    if(SELECTED_MODEL == "microsoft/phi-4-mini-instruct"):
+        response = active_client.chat.completions.create(
+            model=route['model_id'],
+            messages=messages,
+            max_tokens=256,
+            temperature=0.7,
+        )
+    else:
+        response = active_client.chat.completions.create(
+            model=route['model_id'],
+            messages=messages,
+            max_tokens=1024,
+            temperature=0.7,
+        )
     return response
 
 
@@ -225,4 +232,4 @@ with gr.Blocks() as demo:
     model.change(fn=change_model, inputs=model, outputs=[u_chatbot, f_chatbot, u_logs, f_logs, user_input])
 
 
-demo.launch()
+demo.launch(share=True)
