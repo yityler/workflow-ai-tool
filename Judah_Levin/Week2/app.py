@@ -9,6 +9,7 @@ import urllib.request
 from typing import Any
 
 import gradio as gr
+from stop_words import get_stop_words
 
 
 PROVIDERS = {
@@ -52,25 +53,73 @@ PRICING = {
     "gemini-3.1-flash-lite": {"input": 0.25, "cached": 0.025, "output": 1.50},
 }
 
-LEADING_PLEASANTRIES = re.compile(
-    r"^\s*(?:(?:hello|hi|hey)(?:\s+there)?|please|kindly|thanks|thank\s+you)"
-    r"(?:\s*[,!:.\-–—]\s*|\s+|$)",
+ENGLISH_STOP_WORDS = frozenset(word.casefold() for word in get_stop_words("english"))
+
+
+def _dataset_terms(*candidates: str) -> frozenset[str]:
+    """Select semantic candidates that exist in the 2025.11.4 stop-word data."""
+    return frozenset(word for word in candidates if word.casefold() in ENGLISH_STOP_WORDS)
+
+
+# The source package does not label semantic categories, so candidate sets stay narrow.
+# Dataset membership prevents a generic all-stop-words pass from destroying prompt meaning.
+GREETINGS = _dataset_terms("hello", "hi", "greetings", "welcome") | {"hey"}
+COURTESY_WORDS = _dataset_terms("please", "thank", "thanks", "dear", "regards") | {
+    "kindly",
+    "cheers",
+}
+HONORIFICS = _dataset_terms("mr", "mrs", "ms", "miss") | {
+    "sir",
+    "madam",
+    "ma'am",
+    "dr",
+    "doctor",
+    "professor",
+}
+REQUEST_AUXILIARIES = _dataset_terms("can", "could", "would")
+
+
+def _alternation(words: set[str] | frozenset[str]) -> str:
+    return "|".join(re.escape(word) for word in sorted(words, key=len, reverse=True))
+
+
+_greeting_pattern = _alternation(GREETINGS)
+_courtesy_pattern = _alternation(COURTESY_WORDS)
+_honorific_pattern = _alternation(HONORIFICS)
+_request_pattern = _alternation(REQUEST_AUXILIARIES)
+
+# Removes direct-address wrappers such as “Hello John,” and “Dear Dr. Smith,”.
+DIRECT_ADDRESS = re.compile(
+    rf"^\s*(?:(?:dear)\s+)?(?:{_greeting_pattern}|{_honorific_pattern})\.?"
+    rf"(?:\s+[\w'’-]+){{0,3}}\s*[,!:;\-–—]\s*",
     re.IGNORECASE,
 )
-TRAILING_PLEASANTRIES = re.compile(
-    r"(?:^|\s+)(?:please|thanks|thank\s+you|thank-you)[.!?\s]*$",
+# Removes low-information request particles such as “could you please”.
+LEADING_REQUEST_PARTICLES = re.compile(
+    rf"^\s*(?:{_request_pattern})\s+you(?:\s+please)?(?:\s*[,!:;\-–—]\s*|\s+)",
+    re.IGNORECASE,
+)
+LEADING_PLEASANTRY = re.compile(
+    rf"^\s*(?:{_greeting_pattern}|{_courtesy_pattern})(?:\s+there)?"
+    rf"(?:\s*[,!:.\-–—]\s*|\s+|$)",
+    re.IGNORECASE,
+)
+TRAILING_PLEASANTRY = re.compile(
+    rf"(?:^|\s*[,;:]?\s+)(?:thank\s+you|thank-you|{_courtesy_pattern})[.!?\s]*$",
     re.IGNORECASE,
 )
 
 
 def clean_prompt(prompt: str) -> str:
-    """Remove boundary pleasantries without rewriting meaningful prompt content."""
+    """Remove stop-word-backed boundary politeness without rewriting prompt content."""
     cleaned = prompt.strip()
     previous = None
     while cleaned and cleaned != previous:
         previous = cleaned
-        cleaned = LEADING_PLEASANTRIES.sub("", cleaned, count=1).strip()
-        cleaned = TRAILING_PLEASANTRIES.sub("", cleaned, count=1).strip()
+        cleaned = DIRECT_ADDRESS.sub("", cleaned, count=1).strip()
+        cleaned = LEADING_REQUEST_PARTICLES.sub("", cleaned, count=1).strip()
+        cleaned = LEADING_PLEASANTRY.sub("", cleaned, count=1).strip()
+        cleaned = TRAILING_PLEASANTRY.sub("", cleaned, count=1).strip()
     return re.sub(r"[ \t]+", " ", cleaned)
 
 

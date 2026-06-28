@@ -45,7 +45,8 @@ Wait until Terminal displays `Running on local URL: http://127.0.0.1:7860`, then
 
 ## Notes
 
-- Prompt cleanup is intentionally conservative: it removes greetings, “please,” and thanks only at the beginning or end.
+- Prompt cleanup uses the `stop-words` 2025.11.4 English dataset to identify low-information greetings, request particles, courtesies, and honorifics at prompt boundaries. It deliberately does not remove every stop word, which would damage meaningful questions.
+- Direct-address wrappers such as “Hello John,” and “Dear Dr. Smith,” and request particles such as “Could you please” are removed while occurrences inside the meaningful prompt are preserved.
 - With an API key, token counts come from the selected provider's response.
 - When no key is supplied, the app estimates tokens by splitting the cleaned prompt into word, number, and punctuation pieces and approximating subword splits. This is only a guess; provider tokenizers may differ.
 - Prices are constants in `app.py` and should be checked against each provider's current pricing before production use.
