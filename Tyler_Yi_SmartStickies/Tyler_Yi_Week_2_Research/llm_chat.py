@@ -55,6 +55,66 @@ def minimize_prompt(text: str) -> str:
     return " ".join(kept)
 
 
+# --- RAG: keyword-based retrieval (no extra API key needed) -------------------
+# RAG knowledge base: loaded from knowledge_base.txt (an open-licensed Google reference doc).
+# This is the pre-gathered dataset the AI references when RAG is on. Edit that file — or paste
+# your own text in the app — to ask about something else.
+def _load_knowledge_base():
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "knowledge_base.txt")
+    try:
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        return "Add a document here to ask questions about it (knowledge_base.txt was not found)."
+
+
+SAMPLE_DOC = _load_knowledge_base()
+
+
+# The AI's persona: a self-service checkout clerk for the Smart Stickies store.
+CLERK_PERSONA = (
+    "You are the friendly self-service checkout assistant for Smart Stickies, an RFID-powered "
+    "retail store in Singapore. Help the customer check out: identify products, give prices in "
+    "Singapore dollars, add up totals, apply 9% GST when asked, and answer questions about "
+    "products, payment, membership, and store policies. Keep replies short and helpful."
+)
+
+
+def _chunks(text, size=60, overlap=15):
+    """Split the document into overlapping chunks of ~`size` words."""
+    words = text.split()
+    out, i = [], 0
+    while i < len(words):
+        out.append(" ".join(words[i:i + size]))
+        i += size - overlap
+    return [c for c in out if c.strip()]
+
+
+def retrieve(document, question, k=3):
+    """Pick the chunks that share the most meaningful words with the question."""
+    sw = _get_stopwords()
+    q_words = {w.lower() for w in re.findall(r"\b[\w']+\b", question) if w.lower() not in sw}
+    scored = []
+    for c in _chunks(document):
+        c_words = {w.lower() for w in re.findall(r"\b[\w']+\b", c)}
+        scored.append((len(q_words & c_words), c))
+    scored.sort(key=lambda x: x[0], reverse=True)
+    # Prefer chunks that actually matched; fall back to the first few if none did.
+    matched = [c for s, c in scored[:k] if s > 0]
+    return matched or [c for s, c in scored[:k]]
+
+
+def web_search(query, k=4):
+    """Live web search (DuckDuckGo) — returns a list of {title, href, body} results.
+    This is the 'retrieve from the internet' source for RAG."""
+    try:
+        from ddgs import DDGS
+    except ImportError:  # older package name
+        from duckduckgo_search import DDGS
+    with DDGS() as ddgs:
+        return list(ddgs.text(query, max_results=k))
+
+
 # --- One call function per provider -------------------------------------------
 # Each returns (response_text, input_tokens, output_tokens).
 
@@ -113,7 +173,8 @@ PROVIDERS = {
 }
 
 
-def chat(provider_name: str, api_key: str, minimize: bool, prompt: str):
+def chat(provider_name: str, api_key: str, minimize: bool, use_rag: bool, rag_source: str,
+         document: str, prompt: str):
     cfg = PROVIDERS[provider_name]
     key = (api_key or "").strip() or os.environ.get(cfg["env"], "")
 
@@ -123,10 +184,44 @@ def chat(provider_name: str, api_key: str, minimize: bool, prompt: str):
         return "", "Enter a prompt first."
 
     original = prompt.strip()
-    sent = original
+
+    # Optionally shrink the question by removing stopwords.
+    question = original
     if minimize:
         trimmed = minimize_prompt(original)
-        sent = trimmed if trimmed else original  # don't send an empty prompt
+        question = trimmed if trimmed else original
+
+    # Optionally turn on RAG: retrieve context, then ask the model to answer from it.
+    rag_chunks = None      # context pieces used (web snippets or document chunks)
+    rag_sources = None     # list of (title, url) when using web search
+    rag_mode = None        # "web" or "document"
+    sent = question
+    if use_rag:
+        if rag_source.startswith("Web"):
+            try:
+                results = web_search(original, k=4)
+            except Exception as e:
+                return "", f"Web search error: {e}"
+            if not results:
+                return "", "Web search returned no results. Try rephrasing the question."
+            rag_chunks = [f"{r.get('title','')}: {r.get('body','')}" for r in results]
+            rag_sources = [(r.get("title", ""), r.get("href", "")) for r in results]
+            rag_mode = "web"
+        elif (document or "").strip():
+            rag_chunks = retrieve(document, original, k=3)
+            rag_mode = "document"
+
+    if rag_chunks is not None:
+        context = "\n\n".join(rag_chunks)
+        sent = (
+            CLERK_PERSONA +
+            "\n\nUse the information below (retrieved for this question) to help the customer. "
+            "If it is not covered, say you'll call a staff member.\n\n"
+            f"Information:\n{context}\n\nCustomer: {question}"
+        )
+    else:
+        # No RAG: still answer in character as the checkout clerk.
+        sent = CLERK_PERSONA + f"\n\nCustomer: {question}"
 
     start = time.perf_counter()
     try:
@@ -151,19 +246,30 @@ def chat(provider_name: str, api_key: str, minimize: bool, prompt: str):
     )
 
     if minimize:
-        orig_words = count_words(original)
-        sent_words = count_words(sent)
-        # Estimate what the original would have cost by scaling the real token count.
-        est_orig_tokens = round(in_tok * orig_words / sent_words) if sent_words else in_tok
-        saved_tokens = max(est_orig_tokens - in_tok, 0)
-        saved_cost = saved_tokens / 1_000_000 * in_price
         breakdown += (
             "\n\n**NLTK token minimizer (stopword removal)**\n\n"
-            f"- Words: {orig_words} → {sent_words} after trimming\n"
-            f"- Sent prompt: `{sent}`\n"
-            f"- Input tokens actually sent: **{in_tok}**\n"
-            f"- Estimated input tokens *without* minimizing: ~{est_orig_tokens}\n"
-            f"- Estimated savings: ~{saved_tokens} tokens (~${saved_cost:.6f})"
+            f"- Question words: {count_words(original)} → {count_words(question)} after trimming"
+        )
+
+    # RAG detail: show the source and how much the retrieved context added to the input cost.
+    if rag_chunks is not None:
+        ctx_words = count_words("\n\n".join(rag_chunks))
+        total_words = count_words(sent)
+        est_ctx_tokens = round(in_tok * ctx_words / total_words) if total_words else 0
+        est_ctx_cost = est_ctx_tokens / 1_000_000 * in_price
+        est_base_tokens = max(in_tok - est_ctx_tokens, 0)
+        if rag_mode == "web":
+            srcs = "\n".join(f"  {i+1}. [{t}]({u})" for i, (t, u) in enumerate(rag_sources))
+            origin = (f"Searched the web and used **{len(rag_chunks)}** result(s) as context:\n{srcs}")
+        else:
+            origin = f"Retrieved **{len(rag_chunks)}** chunk(s) from the document and used them as context."
+        breakdown += (
+            f"\n\n**RAG: ON (source: {rag_mode})**\n\n"
+            f"- {origin}\n"
+            f"- Input tokens this run: **{in_tok}** = your question (~{est_base_tokens}) "
+            f"+ retrieved context (~{est_ctx_tokens}).\n"
+            f"- Extra cost from the RAG context: **~${est_ctx_cost:.6f}** "
+            f"(without RAG the input would be ~{est_base_tokens} tokens)."
         )
 
     return text, breakdown
@@ -171,8 +277,6 @@ def chat(provider_name: str, api_key: str, minimize: bool, prompt: str):
 
 def build_ui() -> gr.Blocks:
     with gr.Blocks(title="Free LLM Chat") as demo:
-        gr.Markdown("# Free LLM Chat\nPick a model, enter a prompt, and see the response "
-                    "plus a token & cost breakdown.")
         with gr.Row():
             provider = gr.Dropdown(
                 choices=list(PROVIDERS.keys()),
@@ -182,12 +286,23 @@ def build_ui() -> gr.Blocks:
             api_key = gr.Textbox(label="API key", type="password",
                                  placeholder="Paste key (or set it as an environment variable)")
         minimize = gr.Checkbox(label="Minimize tokens (NLTK stopword removal)", value=False)
+        use_rag = gr.Checkbox(label="Use RAG (retrieve context, then answer from it)", value=False)
+        rag_source = gr.Radio(
+            ["Web search (live internet)", "Document (the box below)"],
+            value="Web search (live internet)",
+            label="RAG source (used when RAG is on)",
+        )
+        hide_doc = gr.Checkbox(label="Hide document box", value=False)
+        document = gr.Textbox(label="Knowledge document (only used if RAG source = Document)",
+                              lines=6, value=SAMPLE_DOC)
+        # Toggle just hides/shows the box in the UI — the document text is still used.
+        hide_doc.change(lambda h: gr.update(visible=not h), hide_doc, document)
         prompt = gr.Textbox(label="Prompt", placeholder="Ask something…", lines=6)
         submit = gr.Button("Send", variant="primary")
         out = gr.Textbox(label="Response", lines=12)
         cost = gr.Markdown(label="Token & cost breakdown")
 
-        inputs = [provider, api_key, minimize, prompt]
+        inputs = [provider, api_key, minimize, use_rag, rag_source, document, prompt]
         submit.click(fn=chat, inputs=inputs, outputs=[out, cost])
         prompt.submit(fn=chat, inputs=inputs, outputs=[out, cost])
     return demo
