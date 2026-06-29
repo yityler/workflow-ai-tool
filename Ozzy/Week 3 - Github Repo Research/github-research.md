@@ -35,7 +35,6 @@ It works somewhat like this:
 
 User Prompt → LLM analyzes requirements → Generate project structure → Generate source code → User reviews the result
 
-Create an application for a hospital that allows users to schedule and check appointment timesCreaat
 This is similar to our project's goal. The main difference is that GPT Engineer generates source code, while our project would generate an application layout.
 
 ---
