@@ -32,6 +32,18 @@ Keep that Terminal window open while using the site. Press `Ctrl+C` in Terminal 
 
 Enter a key in the password field to make a real request. The key stays in the Gradio session and is sent only to the selected provider. If the key field is blank, the app does not contact the provider: it cleans the prompt, estimates its token count locally, and calculates an estimated input cost for the selected model. A ChatGPT subscription does not include OpenAI API usage; API billing is separate.
 
+## Developer Layout Lab
+
+The website also has a password-protected **Developer Layout Lab** tab.
+
+- Developer password: `sifter-dev-2026`
+- The developer page uses LangChain retrieval over the local project files, then asks the selected LLM to produce a safe `layout_config.json` proposal.
+- You can use DeepSeek, ChatGPT / OpenAI, or Gemini for the developer LLM call.
+- Review the generated JSON before clicking **Apply proposed layout**.
+- After applying a layout, restart the Gradio server so the full website loads the new layout.
+
+The layout tool only saves a constrained JSON config, not arbitrary Python code. It can change the title, subtitle, button text, accent color, page width, prompt/output heights, column balance, and limited custom CSS.
+
 ## Troubleshooting
 
 If the address does not load, return to the project folder and restart the server:
