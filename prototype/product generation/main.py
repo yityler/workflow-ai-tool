@@ -11,8 +11,8 @@ import uuid
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from app.concept import generate_concept
-from app.image_gen import generate_image
+from concept import generate_concept
+from image_gen import generate_image
 
 app = FastAPI(title="Product Generation Module")
 
