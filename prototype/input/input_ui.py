@@ -121,6 +121,9 @@ def submit_AI(
 # I just saw Rohan's product generation thingy - maybe try to integrate that into this UI so user can use both
 # Or maybe just have the AI straight up generate graaphics into the web UI 
 
+# Should probably also add a box after response for what user would like to change to the generate thingy
+
+
 def build_ui():
     with gr.Blocks(title="Product Prompt Builder") as app:
         gr.Markdown("## Product Prompt Builder\nFill in what you know about the product and how you want the page to feel. Hit Generate when you're ready.")
