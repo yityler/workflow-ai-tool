@@ -1,5 +1,6 @@
 const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 const assetRoot = '../cornerstone-tabs-configurator-metafields/assets';
+const editableStorageKey = 'cornerstoneExample2Edits';
 
 const variants = {
     standard: {
@@ -59,6 +60,38 @@ const productMetafields = [
 
 let currentVariant = 'standard';
 const selectedAddons = new Set();
+
+function applySavedEdits() {
+    let edits = {};
+    const encodedEdits = new URLSearchParams(window.location.search).get('edits');
+    try {
+        if (encodedEdits) {
+            const binary = atob(encodedEdits);
+            const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+            edits = JSON.parse(new TextDecoder().decode(bytes));
+            localStorage.setItem(editableStorageKey, JSON.stringify(edits));
+        } else {
+            edits = JSON.parse(localStorage.getItem(editableStorageKey) || '{}');
+        }
+    } catch (error) {
+        edits = {};
+    }
+
+    document.querySelectorAll('[data-edit-text]').forEach((node) => {
+        const value = edits[node.dataset.editText];
+        if (value) node.textContent = value;
+    });
+
+    document.querySelectorAll('[data-edit-image]').forEach((node) => {
+        const value = edits[node.dataset.editImage];
+        if (value) node.src = value;
+    });
+
+    document.querySelectorAll('[data-edit-data-image]').forEach((node) => {
+        const value = edits[node.dataset.editDataImage];
+        if (value) node.dataset.image = value;
+    });
+}
 
 function slugify(value) {
     return value.toLowerCase()
@@ -177,6 +210,7 @@ document.querySelector('.thumb-grid').addEventListener('click', (event) => {
     document.querySelector('[data-main-image]').src = button.dataset.image;
 });
 
+applySavedEdits();
 renderAddons();
 renderDynamicTabs();
 renderMetafields(document.querySelector('[data-product-metafields]'), productMetafields);

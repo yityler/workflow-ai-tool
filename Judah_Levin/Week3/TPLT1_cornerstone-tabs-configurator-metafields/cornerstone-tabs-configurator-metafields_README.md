@@ -10,6 +10,8 @@
 
 - large numbers of styles
 
+- has built in button/link system
+
 ## Cons
 
 - No integrated AI editing system (yet)
@@ -27,6 +29,11 @@
 - Web address:
 `file:///Users/judahlevin/workflow-ai-tool/Judah_Levin/Week3/TPLT1_cornerstone-tabs-configurator-metafields/example-website/index.html`
 
+- Edit text, buttons, and image slots here: [editor.html](example-website/editor.html)
+
+- Editor web address:
+`file:///Users/judahlevin/workflow-ai-tool/Judah_Levin/Week3/TPLT1_cornerstone-tabs-configurator-metafields/example-website/editor.html`
+
 - The example uses assets and concepts from the `cornerstone-tabs-configurator-metafields` theme folder, including product images, dynamic custom-field tabs, configurator-style selections, and product/variant metafield panels.
 
 ### Open the 2<sup>nd</sup> example here:
@@ -35,5 +42,10 @@
 
 - Web address:
 `file:///Users/judahlevin/workflow-ai-tool/Judah_Levin/Week3/TPLT1_cornerstone-tabs-configurator-metafields/example-website-2/index.html`
+
+- Edit text, buttons, and image slots here: [editor.html](example-website-2/editor.html)
+
+- Editor web address:
+`file:///Users/judahlevin/workflow-ai-tool/Judah_Levin/Week3/TPLT1_cornerstone-tabs-configurator-metafields/example-website-2/editor.html`
 
 - This second example is also a PDP, but uses a very different layout and visual direction: a dark frame, yellow purchase column, vertical gallery rail, bold black borders, red/cyan accents, dynamic tabs, configurator add-ons, and product/variant metafield panels.

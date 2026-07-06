@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Edit Example Website 1</title>
+    <link rel="stylesheet" href="editor.css">
+</head>
+<body>
+    <main class="editor-shell">
+        <header class="editor-header">
+            <div>
+                <p class="eyebrow">Example Website 1</p>
+                <h1>Edit PDP Content</h1>
+            </div>
+            <a class="preview-link" href="index.html" data-preview-link>View Site</a>
+        </header>
+
+        <form class="editor-form" data-editor-form>
+            <section class="editor-panel">
+                <h2>Text</h2>
+                <label>Brand name<input name="brandName" value="Cornerstone Components"></label>
+                <label>Eyebrow<input name="eyebrow" value="Custom product template"></label>
+                <label>Product title<input name="productTitle" value="Buildable Product Detail Page"></label>
+                <label>Product brand<input name="productBrand" value="Cornerstone demo product"></label>
+                <label>Review link<input name="reviewLink" value="12 reviews"></label>
+                <label>Configurator heading<input name="configuratorTitle" value="Choose Components"></label>
+                <label>Summary heading<input name="summaryTitle" value="Your Selections"></label>
+                <label>Add button<input name="cartButton" value="Add Selected to Cart"></label>
+                <label>Move button<input name="moveButton" value="Move to Site"></label>
+                <label>Metafields heading<input name="metafieldsTitle" value="Product and Variant Data"></label>
+            </section>
+
+            <section class="editor-panel">
+                <h2>Long Text</h2>
+                <label>Notice<textarea name="noticeText">This example mirrors the folder's custom files: `__newtab` custom fields become tabs, `--` groups become configurator categories, and Storefront metafields are shown as product/variant data.</textarea></label>
+                <label>Description tab label<input name="descriptionTab" value="Description"></label>
+                <label>Description text<textarea name="descriptionText">This product page demonstrates the same structure used by the Cornerstone custom field template. Native product content stays first, and dynamic custom-field sections are injected into the tab row.</textarea></label>
+                <label>Warranty tab label<input name="warrantyTab" value="Warranty"></label>
+                <label>Warranty text<textarea name="warrantyText">One-year limited warranty with replacement support for damaged configurable components.</textarea></label>
+            </section>
+
+            <section class="editor-panel">
+                <h2>Images</h2>
+                <label>Logo image<input name="logoImage" value="../cornerstone-tabs-configurator-metafields/assets/icons/logo-small.svg"></label>
+                <label>Main product image<input name="mainImage" value="../cornerstone-tabs-configurator-metafields/assets/img/ProductDefault.gif"></label>
+                <label>Thumbnail 1<input name="thumbImage1" value="../cornerstone-tabs-configurator-metafields/assets/img/ProductDefault.gif"></label>
+                <label>Thumbnail 2<input name="thumbImage2" value="../cornerstone-tabs-configurator-metafields/assets/img/BrandDefault.gif"></label>
+                <label>Thumbnail 3<input name="thumbImage3" value="../cornerstone-tabs-configurator-metafields/assets/img/GiftCertificate.png"></label>
+                <label>Rating image<input name="ratingImage" value="../cornerstone-tabs-configurator-metafields/assets/img/IcoRating4.png"></label>
+            </section>
+
+            <div class="actions">
+                <button type="submit">Save Changes</button>
+                <button type="button" data-reset>Reset</button>
+                <span data-status></span>
+            </div>
+        </form>
+    </main>
+
+    <script src="editor.js"></script>
+</body>
+</html>

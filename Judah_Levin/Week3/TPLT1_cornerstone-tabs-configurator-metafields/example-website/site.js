@@ -49,6 +49,34 @@ const variantMetafields = [
 
 const selections = new Map();
 const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+const editableStorageKey = 'cornerstoneExample1Edits';
+
+function applySavedEdits() {
+    let edits = {};
+    const encodedEdits = new URLSearchParams(window.location.search).get('edits');
+    try {
+        if (encodedEdits) {
+            const binary = atob(encodedEdits);
+            const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+            edits = JSON.parse(new TextDecoder().decode(bytes));
+            localStorage.setItem(editableStorageKey, JSON.stringify(edits));
+        } else {
+            edits = JSON.parse(localStorage.getItem(editableStorageKey) || '{}');
+        }
+    } catch (error) {
+        edits = {};
+    }
+
+    document.querySelectorAll('[data-edit-text]').forEach((node) => {
+        const value = edits[node.dataset.editText];
+        if (value) node.textContent = value;
+    });
+
+    document.querySelectorAll('[data-edit-image]').forEach((node) => {
+        const value = edits[node.dataset.editImage];
+        if (value) node.src = value;
+    });
+}
 
 function slugify(text) {
     return text.toLowerCase()
@@ -212,6 +240,7 @@ function renderVariantMetafields(hasSelection) {
     renderMetafields(container, 'Variant metafields', variantMetafields);
 }
 
+applySavedEdits();
 renderDynamicTabs();
 renderConfigurator();
 renderSelections();

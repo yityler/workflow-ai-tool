@@ -9,8 +9,8 @@
 <body>
     <header class="site-header">
         <a class="brand" href="#" aria-label="Cornerstone example home">
-            <img src="../cornerstone-tabs-configurator-metafields/assets/icons/logo-small.svg" alt="">
-            <span>Cornerstone Components</span>
+            <img data-edit-image="logoImage" src="../cornerstone-tabs-configurator-metafields/assets/icons/logo-small.svg" alt="">
+            <span data-edit-text="brandName">Cornerstone Components</span>
         </a>
         <nav class="site-nav" aria-label="Primary">
             <a href="#configurator">Configurator</a>
@@ -23,29 +23,29 @@
         <section class="product-shell" aria-labelledby="product-title">
             <div class="product-media">
                 <div class="product-image">
-                    <img src="../cornerstone-tabs-configurator-metafields/assets/img/ProductDefault.gif" alt="Default Cornerstone product preview">
+                    <img data-edit-image="mainImage" src="../cornerstone-tabs-configurator-metafields/assets/img/ProductDefault.gif" alt="Default Cornerstone product preview">
                 </div>
                 <div class="thumbnail-row" aria-label="Product thumbnails">
                     <button class="thumb is-active" type="button">
-                        <img src="../cornerstone-tabs-configurator-metafields/assets/img/ProductDefault.gif" alt="">
+                        <img data-edit-image="thumbImage1" src="../cornerstone-tabs-configurator-metafields/assets/img/ProductDefault.gif" alt="">
                     </button>
                     <button class="thumb" type="button">
-                        <img src="../cornerstone-tabs-configurator-metafields/assets/img/BrandDefault.gif" alt="">
+                        <img data-edit-image="thumbImage2" src="../cornerstone-tabs-configurator-metafields/assets/img/BrandDefault.gif" alt="">
                     </button>
                     <button class="thumb" type="button">
-                        <img src="../cornerstone-tabs-configurator-metafields/assets/img/GiftCertificate.png" alt="">
+                        <img data-edit-image="thumbImage3" src="../cornerstone-tabs-configurator-metafields/assets/img/GiftCertificate.png" alt="">
                     </button>
                 </div>
             </div>
 
             <div class="product-data">
-                <p class="eyebrow">Custom product template</p>
-                <h1 id="product-title">Buildable Product Detail Page</h1>
-                <p class="brand-link">Cornerstone demo product</p>
+                <p class="eyebrow" data-edit-text="eyebrow">Custom product template</p>
+                <h1 id="product-title" data-edit-text="productTitle">Buildable Product Detail Page</h1>
+                <p class="brand-link" data-edit-text="productBrand">Cornerstone demo product</p>
                 <p class="price" data-base-price="349">$349.00</p>
                 <div class="rating" aria-label="Rated four out of five stars">
-                    <img src="../cornerstone-tabs-configurator-metafields/assets/img/IcoRating4.png" alt="">
-                    <a href="#tabs">12 reviews</a>
+                    <img data-edit-image="ratingImage" src="../cornerstone-tabs-configurator-metafields/assets/img/IcoRating4.png" alt="">
+                    <a href="#tabs" data-edit-text="reviewLink">12 reviews</a>
                 </div>
 
                 <dl class="product-info">
@@ -57,7 +57,7 @@
                     <dd>product-view-cf, description-tabs-cf, product-view-metafields</dd>
                 </dl>
 
-                <div class="notice">
+                <div class="notice" data-edit-text="noticeText">
                     This example mirrors the folder's custom files: `__newtab` custom fields become tabs, `--` groups become configurator categories, and Storefront metafields are shown as product/variant data.
                 </div>
             </div>
@@ -66,19 +66,19 @@
         <section class="configurator-section" id="configurator" aria-labelledby="configurator-title">
             <div class="section-heading">
                 <p class="eyebrow">Custom fields configurator</p>
-                <h2 id="configurator-title">Choose Components</h2>
+                <h2 id="configurator-title" data-edit-text="configuratorTitle">Choose Components</h2>
             </div>
             <div class="configurator-layout">
                 <div class="configurator-categories" data-configurator-categories></div>
                 <aside class="selection-summary" aria-labelledby="summary-title">
-                    <h3 id="summary-title">Your Selections</h3>
+                    <h3 id="summary-title" data-edit-text="summaryTitle">Your Selections</h3>
                     <div data-selection-list class="selection-list"></div>
                     <div class="summary-row">
                         <span>Total</span>
                         <strong data-total>$349.00</strong>
                     </div>
-                    <button class="primary-action" type="button">Add Selected to Cart</button>
-                    <a class="primary-action cart-link" href="../example-website-2/index.html">Move to Site</a>
+                    <button class="primary-action" type="button" data-edit-text="cartButton">Add Selected to Cart</button>
+                    <a class="primary-action cart-link" href="../example-website-2/index.html" data-edit-text="moveButton">Move to Site</a>
                 </aside>
             </div>
         </section>
@@ -86,19 +86,19 @@
         <section class="tabs-section" id="tabs" aria-label="Product details tabs" data-custom-tabs>
             <ul class="tabs" role="tablist">
                 <li class="tab is-active" role="presentation">
-                    <button class="tab-title" type="button" role="tab" aria-selected="true" data-tab-target="tab-description">Description</button>
+                    <button class="tab-title" type="button" role="tab" aria-selected="true" data-tab-target="tab-description" data-edit-text="descriptionTab">Description</button>
                 </li>
                 <li class="tab" role="presentation">
-                    <button class="tab-title" type="button" role="tab" aria-selected="false" data-tab-target="tab-warranty">Warranty</button>
+                    <button class="tab-title" type="button" role="tab" aria-selected="false" data-tab-target="tab-warranty" data-edit-text="warrantyTab">Warranty</button>
                 </li>
             </ul>
 
             <div class="tabs-contents">
                 <div class="tab-content is-active" id="tab-description" role="tabpanel">
-                    <p>This product page demonstrates the same structure used by the Cornerstone custom field template. Native product content stays first, and dynamic custom-field sections are injected into the tab row.</p>
+                    <p data-edit-text="descriptionText">This product page demonstrates the same structure used by the Cornerstone custom field template. Native product content stays first, and dynamic custom-field sections are injected into the tab row.</p>
                 </div>
                 <div class="tab-content" id="tab-warranty" role="tabpanel" hidden>
-                    <p>One-year limited warranty with replacement support for damaged configurable components.</p>
+                    <p data-edit-text="warrantyText">One-year limited warranty with replacement support for damaged configurable components.</p>
                 </div>
             </div>
         </section>
@@ -106,7 +106,7 @@
         <section class="metafields-section" id="metafields" aria-labelledby="metafields-title">
             <div class="section-heading">
                 <p class="eyebrow">Storefront metafields</p>
-                <h2 id="metafields-title">Product and Variant Data</h2>
+                <h2 id="metafields-title" data-edit-text="metafieldsTitle">Product and Variant Data</h2>
             </div>
             <div class="metafield-grid">
                 <div class="metafield-panel" data-product-metafields-base></div>

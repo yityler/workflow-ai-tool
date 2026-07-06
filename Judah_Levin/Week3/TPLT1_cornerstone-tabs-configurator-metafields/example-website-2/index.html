@@ -9,8 +9,8 @@
 <body>
     <header class="site-header">
         <a class="brand" href="#" aria-label="Cornerstone PDP example home">
-            <img src="../cornerstone-tabs-configurator-metafields/assets/icons/logo-small.svg" alt="">
-            <span>Cornerstone PDP</span>
+            <img data-edit-image="logoImage" src="../cornerstone-tabs-configurator-metafields/assets/icons/logo-small.svg" alt="">
+            <span data-edit-text="brandName">Cornerstone PDP</span>
         </a>
         <nav class="header-nav" aria-label="Product navigation">
             <a href="#details">Details</a>
@@ -23,36 +23,36 @@
         <section class="product-layout">
             <div class="gallery" aria-label="Product gallery">
                 <div class="main-image">
-                    <img data-main-image src="../cornerstone-tabs-configurator-metafields/assets/img/ProductDefault.gif" alt="Modular Field Kit product">
+                    <img data-main-image data-edit-image="mainImage" src="../cornerstone-tabs-configurator-metafields/assets/img/ProductDefault.gif" alt="Modular Field Kit product">
                 </div>
                 <div class="thumb-grid">
-                    <button class="thumb is-active" type="button" data-image="../cornerstone-tabs-configurator-metafields/assets/img/ProductDefault.gif">
-                        <img src="../cornerstone-tabs-configurator-metafields/assets/img/ProductDefault.gif" alt="Product view">
+                    <button class="thumb is-active" type="button" data-image="../cornerstone-tabs-configurator-metafields/assets/img/ProductDefault.gif" data-edit-data-image="thumbImage1">
+                        <img data-edit-image="thumbImage1" src="../cornerstone-tabs-configurator-metafields/assets/img/ProductDefault.gif" alt="Product view">
                     </button>
-                    <button class="thumb" type="button" data-image="../cornerstone-tabs-configurator-metafields/assets/img/BrandDefault.gif">
-                        <img src="../cornerstone-tabs-configurator-metafields/assets/img/BrandDefault.gif" alt="Brand view">
+                    <button class="thumb" type="button" data-image="../cornerstone-tabs-configurator-metafields/assets/img/BrandDefault.gif" data-edit-data-image="thumbImage2">
+                        <img data-edit-image="thumbImage2" src="../cornerstone-tabs-configurator-metafields/assets/img/BrandDefault.gif" alt="Brand view">
                     </button>
-                    <button class="thumb" type="button" data-image="../cornerstone-tabs-configurator-metafields/assets/img/GiftCertificate.png">
-                        <img src="../cornerstone-tabs-configurator-metafields/assets/img/GiftCertificate.png" alt="Included certificate">
+                    <button class="thumb" type="button" data-image="../cornerstone-tabs-configurator-metafields/assets/img/GiftCertificate.png" data-edit-data-image="thumbImage3">
+                        <img data-edit-image="thumbImage3" src="../cornerstone-tabs-configurator-metafields/assets/img/GiftCertificate.png" alt="Included certificate">
                     </button>
                 </div>
             </div>
 
             <article class="purchase-card" aria-labelledby="product-title">
-                <p class="eyebrow">Custom PDP template</p>
-                <h1 id="product-title">Modular Field Kit</h1>
-                <p class="product-brand">Cornerstone configurable product</p>
+                <p class="eyebrow" data-edit-text="eyebrow">Custom PDP template</p>
+                <h1 id="product-title" data-edit-text="productTitle">Modular Field Kit</h1>
+                <p class="product-brand" data-edit-text="productBrand">Cornerstone configurable product</p>
 
                 <div class="rating-row">
-                    <img src="../cornerstone-tabs-configurator-metafields/assets/img/IcoRating4.png" alt="Four-star rating">
-                    <a href="#details">12 reviews</a>
+                    <img data-edit-image="ratingImage" src="../cornerstone-tabs-configurator-metafields/assets/img/IcoRating4.png" alt="Four-star rating">
+                    <a href="#details" data-edit-text="reviewLink">12 reviews</a>
                 </div>
 
                 <p class="price" data-total-price>$349.00</p>
 
                 <form class="product-options" id="configure">
                     <fieldset>
-                        <legend>Choose a variant</legend>
+                        <legend data-edit-text="variantLegend">Choose a variant</legend>
                         <div class="swatch-row" data-variant-options>
                             <button class="swatch is-active" type="button" data-variant="standard">Standard</button>
                             <button class="swatch" type="button" data-variant="performance">Performance</button>
@@ -61,7 +61,7 @@
                     </fieldset>
 
                     <fieldset>
-                        <legend>Configurator add-ons</legend>
+                        <legend data-edit-text="addonsLegend">Configurator add-ons</legend>
                         <div class="addon-list" data-addon-list></div>
                     </fieldset>
                 </form>
@@ -75,8 +75,8 @@
                     <dd>product-view-cf + product-view-metafields</dd>
                 </dl>
 
-                <button class="add-button" type="button">Add Selected to Cart</button>
-                <a class="add-button cart-link" href="../example-website/index.html">Move to Site</a>
+                <button class="add-button" type="button" data-edit-text="cartButton">Add Selected to Cart</button>
+                <a class="add-button cart-link" href="../example-website/index.html" data-edit-text="moveButton">Move to Site</a>
                 <p class="cart-note" data-cart-note>Base product selected. Choose add-ons to update the PDP total.</p>
             </article>
         </section>
@@ -84,18 +84,18 @@
         <section class="tab-band" id="details" data-tabs>
             <ul class="tabs" role="tablist">
                 <li class="tab is-active" role="presentation">
-                    <button class="tab-title" type="button" role="tab" aria-selected="true" data-tab-target="tab-description">Description</button>
+                    <button class="tab-title" type="button" role="tab" aria-selected="true" data-tab-target="tab-description" data-edit-text="descriptionTab">Description</button>
                 </li>
                 <li class="tab" role="presentation">
-                    <button class="tab-title" type="button" role="tab" aria-selected="false" data-tab-target="tab-warranty">Warranty</button>
+                    <button class="tab-title" type="button" role="tab" aria-selected="false" data-tab-target="tab-warranty" data-edit-text="warrantyTab">Warranty</button>
                 </li>
             </ul>
             <div class="tab-panels">
                 <div class="tab-panel is-active" id="tab-description" role="tabpanel">
-                    <p>The Modular Field Kit is a PDP example built from the same custom template ideas in this folder: stock description content, injected custom-field tabs, a grouped configurator, and metafield output.</p>
+                    <p data-edit-text="descriptionText">The Modular Field Kit is a PDP example built from the same custom template ideas in this folder: stock description content, injected custom-field tabs, a grouped configurator, and metafield output.</p>
                 </div>
                 <div class="tab-panel" id="tab-warranty" role="tabpanel" hidden>
-                    <p>One-year limited warranty with replacement support for eligible configured components.</p>
+                    <p data-edit-text="warrantyText">One-year limited warranty with replacement support for eligible configured components.</p>
                 </div>
             </div>
         </section>
@@ -103,7 +103,7 @@
         <section class="metafield-band" id="metafields" aria-labelledby="metafields-title">
             <div>
                 <p class="eyebrow">Storefront API simulation</p>
-                <h2 id="metafields-title">Product and Variant Metafields</h2>
+                <h2 id="metafields-title" data-edit-text="metafieldsTitle">Product and Variant Metafields</h2>
             </div>
             <div class="metafield-grid">
                 <article class="metafield-card">

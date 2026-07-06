@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CTCM Visual Backend</title>
+  <link rel="stylesheet" href="/assets/css/site.css">
+  <link rel="stylesheet" href="/backend/admin.css">
+</head>
+<body>
+  <header class="admin-toolbar">
+    <div>
+      <strong>Visual Backend</strong>
+      <span>Edit text in place. Drop images onto picture slots.</span>
+    </div>
+    <div class="admin-toolbar-actions">
+      <button id="save-button" type="button">Save and rebuild</button>
+      <a href="/index.html" target="_blank">View site</a>
+      <span id="status"></span>
+    </div>
+  </header>
+  <main class="ctcm-page admin-preview-shell">
+    <div class="admin-note">
+      <strong>Editing mode:</strong> text and pictures are editable; styling, font size, and layout controls are locked.
+    </div>
+    <div id="visual-editor"></div>
+  </main>
+  <script src="/assets/js/site.js"></script>
+  <script src="/backend/admin.js"></script>
+</body>
+</html>
