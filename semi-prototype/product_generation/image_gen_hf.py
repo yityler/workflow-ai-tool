@@ -8,11 +8,39 @@ import os
 from dotenv import load_dotenv
 from huggingface_hub import InferenceClient
 
-from ..input.input_build_prompt_image import build_prompt_image
+from input_build_prompt import build_prompt
 
 load_dotenv()
 
 IMAGE_MODEL = "black-forest-labs/FLUX.1-schnell"
+
+_client = None
+
+
+def _get_client():
+    """
+    Lazily creates the HF client on first use, instead of at
+    import time. This means importing this module elsewhere
+    (e.g. Ozzy's UI) won't crash the whole app if HF_TOKEN
+    isn't set — the error only surfaces when an image is
+    actually requested.
+    """
+    global _client
+
+    if _client is None:
+        token = os.environ.get("HF_TOKEN")
+
+        if not token:
+            raise ValueError(
+                "HF_TOKEN is not set. Add it to your .env file."
+            )
+
+        _client = InferenceClient(
+            provider="hf-inference",
+            api_key=token,
+        )
+
+    return _client
 
 
 def generate_image(
@@ -36,14 +64,8 @@ def generate_image(
     4. Saves the generated image.
     """
 
-
-
-    client = InferenceClient(
-        provider="hf-inference",
-        api_key=os.environ["HF_TOKEN"],
-    )
     # Step 1: Get product concept from Ozzy's build_prompt
-    product_concept, error = build_prompt_image(
+    product_concept, error = build_prompt(
         product_description=product_description,
         industry=industry,
         target_audience=target_audience,
@@ -81,7 +103,7 @@ Requirements:
 
 
     # Step 3: Generate image using Hugging Face
-    image = client.text_to_image(
+    image = _get_client().text_to_image(
         prompt=image_prompt,
         model=IMAGE_MODEL,
     )
