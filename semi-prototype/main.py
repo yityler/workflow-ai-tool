@@ -13,8 +13,8 @@ from .input.input_build_prompt import build_prompt
 from .input.input_rag import analyze_files
 from .Tyler_Yi_Prototype_Folder import token_optimizer as topt
 from .product_generation.concept import generate_concept
-from .product_generation.Hugging_face_image_gen import generate_image as generate_image_hf
-from .product_generation.cornerstone_layout_generator import (
+from .product_generation.image_gen_hf import generate_image as generate_image_hf
+from .product_generation.cornerstone_page_generator import (
     get_template,
     export_cornerstone_layout,
     attach_product_image,
