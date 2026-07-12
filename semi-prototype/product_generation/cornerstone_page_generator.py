@@ -15,9 +15,9 @@ import gradio as gr
 from typing import Literal
 from pydantic import BaseModel
 
-import token_optimizer as topt
+from Tyler_Yi_Prototype_Folder import token_optimizer as topt
 
-from input_build_prompt import build_prompt
+from input.input_build_prompt import build_prompt
 
 
 litellm.suppress_debug_info = True
