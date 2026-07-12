@@ -15,10 +15,14 @@ import gradio as gr
 from typing import Literal
 from pydantic import BaseModel
 
-from ..Tyler_Yi_Prototype_Folder import token_optimizer as topt
+import token_optimizer as topt
+
+from input_build_prompt import build_prompt
+
 
 litellm.suppress_debug_info = True
 litellm.drop_params = True
+
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -29,6 +33,7 @@ TEMPLATE_DIR = os.path.join(
 
 os.makedirs(TEMPLATE_DIR, exist_ok=True)
 
+
 TRACKER = topt.SavingsTracker()
 
 
@@ -37,11 +42,60 @@ TRACKER = topt.SavingsTracker()
 # ============================================================
 
 def load_product_input():
+
     with open(
-            os.path.join(HERE, "product.json"),
-            encoding="utf-8"
+        os.path.join(HERE, "product.json"),
+        encoding="utf-8"
     ) as f:
         return json.load(f)
+
+
+
+def build_context_from_intake(
+    product_description,
+    industry="",
+    target_audience="",
+    page_theme="",
+    layout_style="",
+    spacing="",
+    tone="",
+    color_scheme="",
+    extra_notes="",
+    product_files=None,
+    theme_files=None,
+):
+
+    """
+    Reuses the teammate's build_prompt() from
+    input_build_prompt.py so both the image-generation
+    flow and the Cornerstone layout flow are driven by
+    the same intake fields and RAG-retrieved context
+    (uploaded product docs + brand/theme docs).
+
+    build_prompt() was written for an HTML/CSS/JS
+    generator, so its output isn't used verbatim as our
+    prompt — it's dropped in as CONTEXT, and our own
+    prompt in get_template() explicitly tells the model
+    to ignore that instruction and only follow the
+    Cornerstone JSON contract.
+    """
+
+    context_prompt, error = build_prompt(
+        product_description,
+        industry,
+        target_audience,
+        page_theme,
+        layout_style,
+        spacing,
+        tone,
+        color_scheme,
+        extra_notes,
+        product_files=product_files,
+        theme_files=theme_files,
+    )
+
+    return context_prompt, error
+
 
 
 # ============================================================
@@ -50,6 +104,7 @@ def load_product_input():
 # ============================================================
 
 LAST_RETRIEVAL = {}
+
 
 _DESIGN_QUERIES = {
 
@@ -67,11 +122,14 @@ _DESIGN_QUERIES = {
 
 
 def _knowledge_chunks():
+
     with open(
-            os.path.join(HERE, "design_knowledge.txt"),
-            encoding="utf-8"
+        os.path.join(HERE, "design_knowledge.txt"),
+        encoding="utf-8"
     ) as f:
+
         text = f.read()
+
 
     return [
         block.strip()
@@ -83,22 +141,27 @@ def _knowledge_chunks():
     ]
 
 
+
 def retrieve_design_knowledge(
-        page_type,
-        k=5
+    page_type,
+    k=5
 ):
+
     """
     Retrieves only relevant UX/design knowledge.
     """
 
     from rank_bm25 import BM25Okapi
 
+
     chunks = _knowledge_chunks()
+
 
     tokenize = lambda x: re.findall(
         r"[a-z0-9']+",
         x.lower()
     )
+
 
     bm25 = BM25Okapi(
         [
@@ -107,14 +170,17 @@ def retrieve_design_knowledge(
         ]
     )
 
+
     query = _DESIGN_QUERIES.get(
         page_type,
         _DESIGN_QUERIES["product_information"]
     )
 
+
     scores = bm25.get_scores(
         tokenize(query)
     )
+
 
     ranked = sorted(
         range(len(chunks)),
@@ -122,10 +188,12 @@ def retrieve_design_knowledge(
         reverse=True
     )
 
+
     selected = [
         chunks[i]
         for i in ranked[:k]
     ]
+
 
     LAST_RETRIEVAL[page_type] = {
 
@@ -140,7 +208,9 @@ def retrieve_design_knowledge(
 
     }
 
+
     return selected
+
 
 
 # ============================================================
@@ -150,23 +220,31 @@ def retrieve_design_knowledge(
 ComponentType = Literal[
 
     "hero",
+
     "product_visual",
+
     "feature_grid",
+
     "benefits",
+
     "specifications",
+
     "comparison",
+
     "testimonial",
+
     "faq",
+
     "cta",
-    "footer",
-    "custom_field_tabs",
-    "configurator",
-    "metafields_panel"
+
+    "footer"
 
 ]
 
 
+
 class Component(BaseModel):
+
     type: ComponentType
 
     id: str
@@ -180,7 +258,9 @@ class Component(BaseModel):
     content: dict = {}
 
 
+
 class ProductPageTemplate(BaseModel):
+
     """
     JSON contract passed into Cornerstone UI.
     """
@@ -203,11 +283,14 @@ class ProductPageTemplate(BaseModel):
         "premium"
     ]
 
+
     tagline: str
 
     primary_cta: str
 
+
     components: list[Component]
+
 
     def model_post_init(self, _):
 
@@ -215,6 +298,7 @@ class ProductPageTemplate(BaseModel):
             c.type
             for c in self.components
         ]
+
 
         required = {
 
@@ -226,22 +310,28 @@ class ProductPageTemplate(BaseModel):
 
         }
 
+
         missing = (
-                required
-                -
-                set(component_types)
+            required
+            -
+            set(component_types)
         )
 
+
         if missing:
+
             raise ValueError(
                 f"Missing required components: {missing}"
             )
 
-        if len(self.components) > 12:
+
+        if len(self.components) > 8:
+
             raise ValueError(
                 "Too many components. "
                 "Keep pages scannable."
             )
+
 
 
 # ============================================================
@@ -261,6 +351,7 @@ MODELS = {
 
     },
 
+
     "edit": {
 
         "model":
@@ -274,17 +365,21 @@ MODELS = {
 }
 
 
+
 def call_structured(
-        route,
-        key,
-        prompt,
-        response_model
+    route,
+    key,
+    prompt,
+    response_model
 ):
+
     import instructor
+
 
     client = instructor.from_litellm(
         litellm.completion
     )
+
 
     obj, response = (
         client.chat.completions
@@ -294,15 +389,15 @@ def call_structured(
             messages=[
                 {
                     "role":
-                        "user",
+                    "user",
 
                     "content":
-                        prompt
+                    prompt
                 }
             ],
 
             model=
-            MODELS[route]["model"],
+                MODELS[route]["model"],
 
             api_key=key,
 
@@ -310,31 +405,33 @@ def call_structured(
         )
     )
 
-    return obj
 
+    return obj
 
 # ============================================================
 # Template Cache
 # ============================================================
 
 def template_path(
-        product_name,
-        brand,
-        page_type,
-        layout_instructions="",
-        reference_notes=""
+    product_name,
+    brand,
+    page_type,
+    layout_instructions="",
+    context_prompt=""
 ):
+
     key = (
         f"{product_name}|"
         f"{brand}|"
         f"{page_type}|"
         f"{layout_instructions.strip().lower()}|"
-        f"{reference_notes.strip().lower()}"
+        f"{context_prompt.strip().lower()}"
     )
 
     hashed = hashlib.md5(
         key.encode()
     ).hexdigest()[:10]
+
 
     return os.path.join(
         TEMPLATE_DIR,
@@ -342,18 +439,20 @@ def template_path(
     )
 
 
+
 # ============================================================
 # Generate Cornerstone Layout Template
 # ============================================================
 
 def get_template(
-        product,
-        brand,
-        brand_color,
-        key,
-        layout_instructions="",
-        reference_notes=""
+    product,
+    brand,
+    brand_color,
+    key,
+    layout_instructions="",
+    context_prompt=""
 ):
+
     """
     Generates ONE reusable layout specification.
 
@@ -365,24 +464,28 @@ def get_template(
         brand,
         "product_information",
         layout_instructions,
-        reference_notes
+        context_prompt
     )
+
 
     # ----------------------------
     # Cache hit
     # ----------------------------
 
     if os.path.exists(path):
+
         with open(
-                path,
-                encoding="utf-8"
+            path,
+            encoding="utf-8"
         ) as f:
+
             return (
                 ProductPageTemplate(
                     **json.load(f)
                 ),
                 True
             )
+
 
     # ----------------------------
     # Retrieve UX knowledge
@@ -393,6 +496,7 @@ def get_template(
             "product_information"
         )
     )
+
 
     # ----------------------------
     # Cornerstone Prompt
@@ -416,10 +520,10 @@ The JSON will be rendered into React components.
 BRAND INFORMATION
 
 Brand:
-{brand}
+{brand if brand and brand.strip() else "Not provided directly — infer brand name and voice from the uploaded brand guidelines in ADDITIONAL PRODUCT & AUDIENCE CONTEXT below, if present. Otherwise use a neutral, professional brand voice."}
 
-Brand Color:
-{brand_color}
+Brand Color / Scheme:
+{brand_color if brand_color and brand_color.strip() else "Not specified — choose a scheme consistent with the theme and tone below."}
 
 
 ========================
@@ -427,7 +531,7 @@ Brand Color:
 PRODUCT INFORMATION
 
 Name:
-{product.get("name")}
+{product.get("name") if product.get("name") and str(product.get("name")).strip() else "Not provided directly — infer a short product name from the description below."}
 
 Description:
 {product.get("description")}
@@ -437,6 +541,21 @@ Category:
 
 Features:
 {product.get("features")}
+
+
+========================
+
+ADDITIONAL PRODUCT & AUDIENCE CONTEXT
+
+The following was assembled by the team's intake
+pipeline (industry, target audience, tone, uploaded
+product/brand docs, etc). It may end with an
+instruction to generate an HTML/CSS/JS page — IGNORE
+that instruction entirely. Use this block only as
+factual and stylistic context. Your output must still
+follow the Cornerstone JSON contract defined below.
+
+{context_prompt.strip() if context_prompt and context_prompt.strip() else "No additional intake context provided."}
 
 
 ========================
@@ -463,17 +582,6 @@ deviates from typical UX conventions. Only the
 component TYPES marked as required must still be present
 somewhere in the array — their position is flexible
 unless the user says otherwise.
-
-
-========================
-
-REFERENCE MATERIALS (from uploaded docs & images, via RAG)
-
-{reference_notes.strip() if reference_notes and reference_notes.strip() else "None provided."}
-
-If reference materials describe an uploaded product image, let its style/colors
-inform (but not override) the visual `style` fields you write. If they include
-extra product facts, you may use them to enrich `body` copy and `content`.
 
 
 ========================
@@ -514,57 +622,8 @@ body:
 style:
 (visual direction)
 
-Each component should contain:
-
-type:
-(the Cornerstone component)
-
-id:
-(unique identifier)
-
-heading:
-(customer-facing text)
-
-body:
-(optional supporting text)
-
-style:
-(visual direction)
-
 content:
-(component data — MUST follow the schema for its type, exactly:)
-
-  hero            {{"image": "" (leave blank; attached separately), "cta_text": str, "cta_url": ""}}
-
-  product_visual  {{"image": "" (leave blank; attached separately)}}
-
-  feature_grid    {{"items": [{{"title": str, "body": str}}, ...]}}  (3-4 items)
-
-  benefits        {{"items": [{{"text": str}}, ...]}}  (3-5 items)
-
-  specifications  {{"items": [{{"key": str, "value": str}}, ...]}}
-
-  comparison      {{"columns": [str, ...], "rows": [{{"label": str, "values": [str, ...]}}, ...]}}
-
-  testimonial     {{"items": [{{"quote": str, "author": str}}, ...]}}  (1-3 items)
-
-  faq             {{"items": [{{"question": str, "answer": str}}, ...]}}  (3-5 items)
-
-  cta             {{"cta_text": str, "cta_url": ""}}
-
-  footer          {{"text": str}}
-
-  custom_field_tabs
-                  {{"tabs": [{{"title": str, "content": str}}, ...]}}
-
-  configurator
-                  {{"categories": [{{"name": str, "items": [{{"name": str, "variant": str, "price": str, "image": "" (leave blank; attached separately)}}, ...]}}, ...]}}
-
-  metafields_panel
-                  {{"items": [{{"key": str, "value": str}}, ...]}}
-
-Leave every "image"/"cta_url"/"url" field as an empty string — those are
-filled in by a separate step, never invented by you.
+(component data)
 
 
 Do NOT generate:
@@ -576,6 +635,7 @@ Do NOT generate:
 Only generate the layout JSON.
 """
 
+
     template = call_structured(
         "design",
         key,
@@ -583,22 +643,106 @@ Only generate the layout JSON.
         ProductPageTemplate
     )
 
+
     # ----------------------------
     # Save template
     # ----------------------------
 
     with open(
-            path,
-            "w",
-            encoding="utf-8"
+        path,
+        "w",
+        encoding="utf-8"
     ) as f:
+
         json.dump(
             template.model_dump(),
             f,
             indent=2
         )
 
+
     return template, False
+
+
+
+# ============================================================
+# Diff-Based Component Editing
+# ============================================================
+
+def edit_component(
+    template,
+    component_id,
+    instruction,
+    key
+):
+
+    """
+    Only sends ONE component to the LLM.
+
+    Instead of:
+
+        entire page JSON
+
+    sends:
+
+        one component JSON
+
+    """
+
+    target = next(
+        (
+            c for c in template.components
+            if c.id == component_id
+        ),
+        None
+    )
+
+
+    if target is None:
+
+        raise ValueError(
+            "Component not found"
+        )
+
+
+    prompt = f"""
+
+Modify this Cornerstone UI component.
+
+Instruction:
+
+{instruction}
+
+
+Current component:
+
+{target.model_dump_json()}
+
+
+Return only the updated component JSON.
+"""
+
+
+    updated = call_structured(
+        "edit",
+        key,
+        prompt,
+        Component
+    )
+
+
+    template.components = [
+
+        updated
+        if c.id == component_id
+        else c
+
+        for c in template.components
+
+    ]
+
+
+    return template
 
 
 
@@ -607,8 +751,9 @@ Only generate the layout JSON.
 # ============================================================
 
 def export_cornerstone_layout(
-        template
+    template
 ):
+
     """
     This is the object sent to Cornerstone UI.
     """
@@ -630,7 +775,17 @@ def generate_cornerstone_page(
         product_name,
         category,
         features,
-        layout_instructions=""
+        layout_instructions="",
+        industry="",
+        target_audience="",
+        page_theme="",
+        layout_style="",
+        spacing="",
+        tone="",
+        color_scheme="",
+        extra_notes="",
+        product_files=None,
+        theme_files=None,
 ):
     key = (
         api_key.strip()
@@ -645,6 +800,28 @@ def generate_cornerstone_page(
         return (
             "",
             "Missing API key"
+        )
+
+    context_prompt, context_error = (
+        build_context_from_intake(
+            product_description,
+            industry,
+            target_audience,
+            page_theme,
+            layout_style,
+            spacing,
+            tone,
+            color_scheme,
+            extra_notes,
+            product_files=product_files,
+            theme_files=theme_files,
+        )
+    )
+
+    if context_error:
+        return (
+            "",
+            f"Intake error: {context_error}"
         )
 
     product = {
@@ -672,7 +849,8 @@ def generate_cornerstone_page(
         brand,
         brand_color,
         key,
-        layout_instructions
+        layout_instructions,
+        context_prompt
     )
 
     elapsed = time.time() - start
@@ -704,6 +882,10 @@ def generate_cornerstone_page(
 {layout_instructions.strip() if layout_instructions and layout_instructions.strip() else "None (default UX ordering)"}
 
 
+**Intake context**
+{"Included (industry/audience/tone + uploaded docs)" if context_prompt and context_prompt.strip() else "None provided"}
+
+
 **Generation time**
 {elapsed:.2f}s
 
@@ -721,27 +903,95 @@ Cornerstone UI.
 
 
 # ============================================================
+# Real Entry Point — Ozzy's Product Intake UI
+# ============================================================
+#
+# This is what actually gets called in the pipeline.
+# It mirrors Ozzy's form fields exactly:
+#
+#   Product Description, Industry, Target Audience,
+#   Extra Notes, Theme, Layout Style, Spacing, Copy Tone,
+#   Color Scheme, Product Info file, Brand/Theme file
+
+
+def generate_layout_from_ozzy_input(
+        product_description,
+        industry="",
+        target_audience="",
+        page_theme="",
+        layout_style="",
+        spacing="",
+        tone="",
+        color_scheme="",
+        extra_notes="",
+        product_files=None,
+        theme_files=None,
+        api_key=None,
+):
+
+    if not product_description or not product_description.strip():
+        return "", "Product description is required"
+
+    # Stable identifier derived from the description itself,
+    # since Ozzy's form doesn't collect a separate product
+    # name. Used only for cache-key/display purposes.
+    product_name = product_description.strip()[:60]
+
+    return generate_cornerstone_page(
+
+        brand="",
+        brand_color=color_scheme,
+        api_key=api_key or "",
+
+        product_description=product_description,
+        product_name=product_name,
+        category="",
+        features="",
+
+        layout_instructions="",
+
+        industry=industry,
+        target_audience=target_audience,
+        page_theme=page_theme,
+        layout_style=layout_style,
+        spacing=spacing,
+        tone=tone,
+        color_scheme=color_scheme,
+        extra_notes=extra_notes,
+        product_files=product_files,
+        theme_files=theme_files,
+    )
+
+
+# ============================================================
 # Example Hugging Face Image Integration
 # ============================================================
 
-def attach_product_image(layout, image_url):
+def attach_product_image(
+        layout,
+        image_url
+):
+    """
+    Adds generated product imagery
+    into the Cornerstone JSON.
+    """
+
     data = json.loads(layout)
 
     for component in data["components"]:
 
         if component["type"] == "product_visual":
-            component.setdefault("content", {})["image"] = image_url
+            component["content"] = {
 
-        elif component["type"] == "hero":
-            component.setdefault("content", {})["image"] = image_url
+                "image":
+                    image_url
 
-        elif component["type"] == "configurator":
-            for category in component["content"].get("categories", []):
-                for item in category.get("items", []):
-                    if not item.get("image"):
-                        item["image"] = image_url
+            }
 
-    return json.dumps(data, indent=2)
+    return json.dumps(
+        data,
+        indent=2
+    )
 
 
 # ============================================================
@@ -756,9 +1006,9 @@ def build_ui():
         gr.Markdown(
             """
             # Cornerstone AI Product Information Page Generator
-
+    
             Input a product and brand.
-
+    
             AI generates a structured frontend layout
             specification for Cornerstone UI.
             """
@@ -806,6 +1056,38 @@ def build_ui():
             lines=2
         )
 
+        gr.Markdown("### Intake Context (shared with image generation)")
+
+        with gr.Row():
+            industry = gr.Textbox(label="Industry")
+            target_audience = gr.Textbox(label="Target Audience")
+
+        with gr.Row():
+            page_theme = gr.Textbox(label="Page Theme")
+            layout_style = gr.Textbox(label="Layout Style")
+
+        with gr.Row():
+            spacing = gr.Textbox(label="Spacing")
+            tone = gr.Textbox(label="Copy Tone")
+
+        color_scheme = gr.Textbox(label="Color Scheme")
+
+        extra_notes = gr.Textbox(
+            label="Additional Notes",
+            lines=2
+        )
+
+        with gr.Row():
+            product_files = gr.File(
+                label="Product Docs (optional)",
+                file_count="multiple"
+            )
+
+            theme_files = gr.File(
+                label="Brand/Theme Docs (optional)",
+                file_count="multiple"
+            )
+
         generate_btn = gr.Button(
             "Generate Cornerstone Layout"
         )
@@ -837,7 +1119,27 @@ def build_ui():
 
                 features,
 
-                layout_instructions
+                layout_instructions,
+
+                industry,
+
+                target_audience,
+
+                page_theme,
+
+                layout_style,
+
+                spacing,
+
+                tone,
+
+                color_scheme,
+
+                extra_notes,
+
+                product_files,
+
+                theme_files
 
             ],
 
