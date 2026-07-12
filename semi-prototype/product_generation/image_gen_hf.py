@@ -8,7 +8,7 @@ import os
 from dotenv import load_dotenv
 from huggingface_hub import InferenceClient
 
-from input_build_prompt import build_prompt
+from input.input_build_prompt import build_prompt
 
 load_dotenv()
 
