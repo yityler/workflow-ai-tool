@@ -3,8 +3,9 @@
 # Currently uses Gradio for ease, we can switch to other UI later if needed
 
 import gradio as gr
-from input_build_prompt import build_prompt
-
+from .input_build_prompt import build_prompt
+from image_gen_hf import generate_image
+from cornerstone_page_generator import generate_layout_from_ozzy_input
 # Options - we can add more if needed
 
 INDUSTRIES = [
@@ -101,7 +102,7 @@ def submit_AI(
     )
 
     if err:
-        return f"error: {err}", ""
+        return f"error: {err}", "", "", None
 
     # send prompt to AI and return response here
     # not to sure about the format of the response
@@ -109,8 +110,44 @@ def submit_AI(
     # what if we hosted the web UI on local so the user can view it
     response = ""
 
-    return prompt, response
+    # Cornerstone layout — same inputs, generated in parallel
+    layout_json, layout_report = generate_layout_from_ozzy_input(
+        product_description=product_description,
+        industry=industry,
+        target_audience=target_audience,
+        page_theme=page_theme,
+        layout_style=layout_style,
+        spacing=spacing,
+        tone=tone,
+        color_scheme=color_scheme,
+        extra_notes=extra_notes,
+        product_files=product_files,
+        theme_files=theme_files,
+    )
 
+    if not layout_json:
+        layout_json = f"// Cornerstone layout generation failed:\n// {layout_report}"
+
+    # Product image — same inputs
+    try:
+        image_path = generate_image(
+            product_description=product_description,
+            industry=industry,
+            target_audience=target_audience,
+            page_theme=page_theme,
+            layout_style=layout_style,
+            spacing=spacing,
+            tone=tone,
+            color_scheme=color_scheme,
+            extra_notes=extra_notes,
+            product_files=product_files,
+            theme_files=theme_files,
+        )
+    except Exception as e:
+        image_path = None
+        print(f"Image generation failed: {e}")
+
+    return prompt, response, layout_json, image_path
 
 # ---- UI ----
 
@@ -204,7 +241,12 @@ def build_ui():
             with gr.Column():
                 gr.Markdown("#### Response")
                 response_out = gr.Textbox(label="response", lines=25, interactive=False)
-
+            with gr.Column():
+                gr.Markdown("#### Cornerstone Layout")
+                cornerstone_out = gr.Code(label="layout json", language="json", lines=25)
+            with gr.Column():
+                gr.Markdown("#### Product Image")
+                image_out = gr.Image(label="generated image")
         submit_btn.click(
             fn=submit_AI,
             inputs=[
@@ -220,7 +262,7 @@ def build_ui():
                 product_files,
                 theme_files,
             ],
-            outputs=[prompt_preview, response_out],
+            outputs=[prompt_preview, response_out, cornerstone_out, image_out],
         )
 
     return app
