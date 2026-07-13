@@ -43,13 +43,28 @@ def get_block_callable(name: str) -> Callable[[dict[str, Any]], BlockResult]:
     """Resolve a manifest block name to its Python function."""
 
     mapping: dict[str, Callable[[dict[str, Any]], BlockResult]] = {
-        "site_shell": block_site_shell,
-        "base_styles": block_base_styles,
-        "base_interactions": block_base_interactions,
-        "product_hero": block_product_hero,
-        "custom_field_tabs": block_custom_field_tabs,
-        "configurator": block_configurator,
-        "metafields_panel": block_metafields_panel,
+        "core_runtime": block_core_runtime,
+        "gallery_main_image": block_gallery_main_image,
+        "gallery_thumbnails": block_gallery_thumbnails,
+        "gallery_caption": block_gallery_caption,
+        "product_title": block_product_title,
+        "product_price": block_product_price,
+        "product_description": block_product_description,
+        "primary_action": block_primary_action,
+        "information_heading": block_information_heading,
+        "information_tab_navigation": block_information_tab_navigation,
+        "information_tab_panels": block_information_tab_panels,
+        "addon_heading": block_addon_heading,
+        "addon_catalog": block_addon_catalog,
+        "addon_summary_heading": block_addon_summary_heading,
+        "addon_selection_lines": block_addon_selection_lines,
+        "addon_total": block_addon_total,
+        "addon_submit_action": block_addon_submit_action,
+        "product_metafields_heading": block_product_metafields_heading,
+        "product_metafields_list": block_product_metafields_list,
+        "variant_metafields_heading": block_variant_metafields_heading,
+        "variant_selector": block_variant_selector,
+        "variant_metafields_panels": block_variant_metafields_panels,
     }
     if name not in mapping:
         raise KeyError(f"Unknown block: {name}")
@@ -150,6 +165,22 @@ body {{
   height: 100%;
   object-fit: contain;
 }}
+
+.ctcm-gallery {{ display: grid; gap: 10px; }}
+.ctcm-gallery-main {{ aspect-ratio: 1 / 1; }}
+.ctcm-gallery-thumbnails {{ display: flex; gap: 8px; overflow-x: auto; }}
+.ctcm-gallery-thumbnail {{
+  width: 64px;
+  height: 64px;
+  padding: 2px;
+  border: 2px solid var(--ctcm-line);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  flex: 0 0 auto;
+}}
+.ctcm-gallery-thumbnail.is-active {{ border-color: var(--ctcm-accent); }}
+.ctcm-gallery-caption {{ margin: 0; color: var(--ctcm-muted); font-size: 0.9rem; }}
 
 .ctcm-media-placeholder {{
   color: var(--ctcm-muted);
@@ -458,6 +489,19 @@ def block_base_interactions(context: dict[str, Any]) -> BlockResult:
       });
     }
 
+    var galleryButton = event.target.closest("[data-ctcm-gallery-image]");
+    if (galleryButton) {
+      var gallery = galleryButton.closest("[data-ctcm-gallery]");
+      var mainImage = gallery.querySelector("[data-ctcm-gallery-main]");
+      mainImage.src = galleryButton.getAttribute("data-src");
+      mainImage.alt = galleryButton.getAttribute("data-alt") || "Product image";
+      var caption = gallery.querySelector("[data-ctcm-gallery-caption]");
+      if (caption) caption.textContent = galleryButton.getAttribute("data-caption") || "";
+      gallery.querySelectorAll("[data-ctcm-gallery-image]").forEach(function (button) {
+        button.classList.toggle("is-active", button === galleryButton);
+      });
+    }
+
     var categoryToggle = event.target.closest("[data-ctcm-category-toggle]");
     if (categoryToggle) {
       var category = categoryToggle.closest(".ctcm-category");
@@ -506,37 +550,82 @@ def block_base_interactions(context: dict[str, Any]) -> BlockResult:
     return BlockResult(files={"assets/js/site.js": js})
 
 
-def block_product_hero(context: dict[str, Any]) -> BlockResult:
+def normalized_product_images(context: dict[str, Any]) -> list[dict[str, str]]:
+    """Normalize legacy and current gallery inputs for all gallery blocks."""
+
     name = escape(str(context.get("product_name", "Product")))
+    images = context.get("product_images") or []
+    if not images and context.get("product_image"):
+        images = [{"url": context["product_image"], "alt": name}]
+    normalized = []
+    for index, image in enumerate(images):
+        if isinstance(image, str):
+            normalized.append({"url": image, "alt": f"{name} image {index + 1}"})
+        else:
+            normalized.append(image)
+    return [image for image in normalized if image.get("url")]
+
+
+def block_gallery_main_image(context: dict[str, Any]) -> BlockResult:
+    images = normalized_product_images(context)
+    if not images:
+        html = '<div class="ctcm-media"><div class="ctcm-media-placeholder">Product image</div></div>'
+    else:
+        image = images[0]
+        html = (f'<div class="ctcm-media ctcm-gallery-main"><img '
+                f'src="{escape(str(image["url"]), quote=True)}" '
+                f'alt="{escape(str(image.get("alt") or "Product image"), quote=True)}" '
+                f'data-ctcm-gallery-main></div>')
+    return BlockResult(sections={"gallery_main_image": html})
+
+
+def block_gallery_thumbnails(context: dict[str, Any]) -> BlockResult:
+    images = normalized_product_images(context)
+    thumbnails = "".join(
+        f'<button class="ctcm-gallery-thumbnail{" is-active" if index == 0 else ""}" type="button" '
+        f'data-ctcm-gallery-image data-src="{escape(str(image["url"]), quote=True)}" '
+        f'data-alt="{escape(str(image.get("alt") or "Product image"), quote=True)}" '
+        f'data-caption="{escape(str(image.get("caption") or ""), quote=True)}" aria-label="Show image {index + 1}">'
+        f'<img src="{escape(str(image["url"]), quote=True)}" alt=""></button>'
+        for index, image in enumerate(images)
+    )
+    html = f'<div class="ctcm-gallery-thumbnails" aria-label="Product image thumbnails">{thumbnails}</div>'
+    return BlockResult(sections={"gallery_thumbnails": html})
+
+
+def block_gallery_caption(context: dict[str, Any]) -> BlockResult:
+    images = normalized_product_images(context)
+    caption = str(images[0].get("caption") or "") if images else ""
+    html = f'<p class="ctcm-gallery-caption" data-ctcm-gallery-caption>{escape(caption)}</p>'
+    return BlockResult(sections={"gallery_caption": html})
+
+
+def block_product_title(context: dict[str, Any]) -> BlockResult:
+    name = escape(str(context.get("product_name", "Product")))
+    return BlockResult(sections={"product_title": f'<h1 class="ctcm-title">{name}</h1>'})
+
+
+def block_product_price(context: dict[str, Any]) -> BlockResult:
     price = escape(str(context.get("product_price", "$0.00")))
+    return BlockResult(sections={"product_price": f'<p class="ctcm-price">{price}</p>'})
+
+
+def block_product_description(context: dict[str, Any]) -> BlockResult:
     description = escape(str(context.get("product_description", "")))
-    image = str(context.get("product_image", "")).strip()
+    return BlockResult(sections={"product_description": f'<p class="ctcm-description">{description}</p>'})
+
+
+def block_primary_action(context: dict[str, Any]) -> BlockResult:
     cta_text = escape(str(context.get("primary_cta_text", "Add Base Product")))
     cta_url = str(context.get("primary_cta_url", "")).strip()
-    if image:
-        media = f'<img src="{escape(image, quote=True)}" alt="{name}">'
-    else:
-        media = '<div class="ctcm-media-placeholder">Product image</div>'
     if cta_url:
         cta = f'<a class="ctcm-button" href="{escape(cta_url, quote=True)}">{cta_text}</a>'
     else:
         cta = f'<button class="ctcm-button" type="button">{cta_text}</button>'
-    html = f"""
-<section class="ctcm-product">
-  <div class="ctcm-media">{media}</div>
-  <div class="ctcm-product-info">
-    <h1 class="ctcm-title">{name}</h1>
-    <p class="ctcm-price">{price}</p>
-    <p class="ctcm-description">{description}</p>
-    {cta}
-  </div>
-</section>
-""".strip()
-    return BlockResult(sections={"product_hero": html})
+    return BlockResult(sections={"primary_action": cta})
 
 
-def block_custom_field_tabs(context: dict[str, Any]) -> BlockResult:
-    heading = escape(str(context.get("product_info_heading", "Product Information")))
+def normalized_tabs(context: dict[str, Any]) -> list[dict[str, Any]]:
     tabs = context.get("tabs") or []
     if not tabs:
         tabs = [
@@ -544,37 +633,46 @@ def block_custom_field_tabs(context: dict[str, Any]) -> BlockResult:
             {"title": "Specifications", "content": "Add specifications here."},
         ]
 
+    return tabs
+
+
+def block_information_heading(context: dict[str, Any]) -> BlockResult:
+    heading = escape(str(context.get("product_info_heading", "Product Information")))
+    return BlockResult(sections={"information_heading": f"<h2>{heading}</h2>"})
+
+
+def block_information_tab_navigation(context: dict[str, Any]) -> BlockResult:
     buttons = []
-    panels = []
-    for index, tab in enumerate(tabs):
+    for index, tab in enumerate(normalized_tabs(context)):
         title = str(tab.get("title") or f"Tab {index + 1}")
-        content = str(tab.get("content") or "")
         panel_id = f"ctcm-tab-{slugify(title)}-{index + 1}"
         active = " is-active" if index == 0 else ""
         buttons.append(
             f'<li><button class="ctcm-tab-button{active}" type="button" data-ctcm-tab="{panel_id}">{escape(title)}</button></li>'
         )
+    html = f'<ul class="ctcm-tabs-list">{"".join(buttons)}</ul>'
+    return BlockResult(sections={"information_tab_navigation": html})
+
+
+def block_information_tab_panels(context: dict[str, Any]) -> BlockResult:
+    panels = []
+    for index, tab in enumerate(normalized_tabs(context)):
+        title = str(tab.get("title") or f"Tab {index + 1}")
+        content = str(tab.get("content") or "")
+        panel_id = f"ctcm-tab-{slugify(title)}-{index + 1}"
+        active = " is-active" if index == 0 else ""
         panels.append(
             f'<div class="ctcm-tab-panel{active}" id="{panel_id}" data-ctcm-tab-panel>{escape(content)}</div>'
         )
-
-    html = f"""
-<section class="ctcm-section" data-ctcm-tabs>
-  <h2>{heading}</h2>
-  <ul class="ctcm-tabs-list">{''.join(buttons)}</ul>
-  {''.join(panels)}
-</section>
-""".strip()
-    return BlockResult(sections={"custom_field_tabs": html})
+    return BlockResult(sections={"information_tab_panels": "".join(panels)})
 
 
-def block_configurator(context: dict[str, Any]) -> BlockResult:
+def block_addon_heading(context: dict[str, Any]) -> BlockResult:
     heading = escape(str(context.get("configurator_heading", "Product Configurator")))
-    summary_heading = escape(str(context.get("summary_heading", "Your Selections")))
-    empty_summary_text = escape(str(context.get("empty_summary_text", "No items selected yet.")))
-    add_selected_text = escape(str(context.get("add_selected_text", "Add Selected")))
-    base_cost = price_number(context.get("configurator_base_cost", 0))
-    price_multiplier = price_number(context.get("configurator_price_multiplier", 1), 1) or 1
+    return BlockResult(sections={"addon_heading": f"<h2>{heading}</h2>"})
+
+
+def block_addon_catalog(context: dict[str, Any]) -> BlockResult:
     categories = context.get("configurator_categories") or []
     if not categories:
         categories = [
@@ -629,29 +727,40 @@ def block_configurator(context: dict[str, Any]) -> BlockResult:
       </div>
 """.rstrip())
 
-    html = f"""
-<section class="ctcm-section" data-ctcm-configurator data-base-cost="{base_cost:.2f}" data-price-multiplier="{price_multiplier:.4f}" data-empty-summary="{empty_summary_text}">
-  <h2>{heading}</h2>
-  <div class="ctcm-configurator-grid">
-    <div>{''.join(category_html)}</div>
-    <aside class="ctcm-summary">
-      <h3>{summary_heading}</h3>
-      <div data-ctcm-summary-lines><p>{empty_summary_text}</p></div>
-      <div class="ctcm-summary-total"><span>Total</span><span data-ctcm-summary-total>$0.00</span></div>
-      <button class="ctcm-button" type="button" data-ctcm-add-selected disabled>{add_selected_text}</button>
-      <div class="ctcm-toast" data-ctcm-toast></div>
-    </aside>
-  </div>
-</section>
-""".strip()
-    return BlockResult(sections={"configurator": html})
+    return BlockResult(sections={"addon_catalog": "".join(category_html)})
 
 
-def block_metafields_panel(context: dict[str, Any]) -> BlockResult:
+def block_addon_summary_heading(context: dict[str, Any]) -> BlockResult:
+    summary_heading = escape(str(context.get("summary_heading", "Your Selections")))
+    return BlockResult(sections={"addon_summary_heading": f"<h3>{summary_heading}</h3>"})
+
+
+def block_addon_selection_lines(context: dict[str, Any]) -> BlockResult:
+    empty_summary_text = escape(str(context.get("empty_summary_text", "No items selected yet.")))
+    html = f'<div data-ctcm-summary-lines><p>{empty_summary_text}</p></div>'
+    return BlockResult(sections={"addon_selection_lines": html})
+
+
+def block_addon_total(context: dict[str, Any]) -> BlockResult:
+    label = escape(str(context.get("addon_total_label", "Total")))
+    html = f'<div class="ctcm-summary-total"><span>{label}</span><span data-ctcm-summary-total>$0.00</span></div>'
+    return BlockResult(sections={"addon_total": html})
+
+
+def block_addon_submit_action(context: dict[str, Any]) -> BlockResult:
+    add_selected_text = escape(str(context.get("add_selected_text", "Add Selected")))
+    html = (f'<button class="ctcm-button" type="button" data-ctcm-add-selected disabled>{add_selected_text}</button>'
+            '<div class="ctcm-toast" data-ctcm-toast></div>')
+    return BlockResult(sections={"addon_submit_action": html})
+
+
+def block_product_metafields_heading(context: dict[str, Any]) -> BlockResult:
     heading = escape(str(context.get("metafields_heading", "Metafields")))
-    variant_label = escape(str(context.get("variant_metafields_label", "Variant metafields")))
+    return BlockResult(sections={"product_metafields_heading": f"<h2>{heading}</h2>"})
+
+
+def block_product_metafields_list(context: dict[str, Any]) -> BlockResult:
     base_fields = context.get("base_metafields") or []
-    variant_fields = context.get("variant_metafields") or []
 
     if not base_fields:
         base_fields = [{"key": "Material", "value": "Example material"}]
@@ -661,49 +770,95 @@ def block_metafields_panel(context: dict[str, Any]) -> BlockResult:
         for field in base_fields
     )
 
-    variant_select = ""
-    variant_panels = ""
+    return BlockResult(sections={"product_metafields_list": f"<dl>{base_rows}</dl>"})
+
+
+def block_variant_metafields_heading(context: dict[str, Any]) -> BlockResult:
+    heading = escape(str(context.get("variant_metafields_heading", "Variant Metafields")))
+    return BlockResult(sections={"variant_metafields_heading": f"<h2>{heading}</h2>"})
+
+
+def block_variant_selector(context: dict[str, Any]) -> BlockResult:
+    variant_label = escape(str(context.get("variant_metafields_label", "Variant metafields")))
+    variant_fields = context.get("variant_metafields") or []
     if variant_fields:
         target_id = "ctcm-variant-metafields"
         options = []
-        panels = []
         for index, variant in enumerate(variant_fields):
             variant_name = str(variant.get("variant") or f"Variant {index + 1}")
             value = slugify(variant_name)
             options.append(f'<option value="{escape(value, quote=True)}">{escape(variant_name)}</option>')
-            rows = "".join(
-                f"<dt>{escape(str(field.get('key', 'Field')))}</dt><dd>{escape(str(field.get('value', '')))}</dd>"
-                for field in variant.get("fields", [])
-            )
-            hidden = "" if index == 0 else " hidden"
-            panels.append(f'<dl data-ctcm-variant-fields="{escape(value, quote=True)}"{hidden}>{rows}</dl>')
         variant_select = f"""
   <label>
     {variant_label}
     <select data-ctcm-variant-select="{target_id}">{''.join(options)}</select>
   </label>
 """.rstrip()
-        variant_panels = f'<div id="{target_id}">{"".join(panels)}</div>'
-
-    html = f"""
-<section class="ctcm-section ctcm-metafields">
-  <h2>{heading}</h2>
-  <dl>{base_rows}</dl>
-  {variant_select}
-  {variant_panels}
-</section>
-""".strip()
-    return BlockResult(sections={"metafields_panel": html})
+    else:
+        variant_select = ""
+    return BlockResult(sections={"variant_selector": variant_select})
 
 
-def block_site_shell(context: dict[str, Any]) -> BlockResult:
+def block_variant_metafields_panels(context: dict[str, Any]) -> BlockResult:
+    panels = []
+    for index, variant in enumerate(context.get("variant_metafields") or []):
+        variant_name = str(variant.get("variant") or f"Variant {index + 1}")
+        value = slugify(variant_name)
+        rows = "".join(
+            f"<dt>{escape(str(field.get('key', 'Field')))}</dt><dd>{escape(str(field.get('value', '')))}</dd>"
+            for field in variant.get("fields", [])
+        )
+        hidden = "" if index == 0 else " hidden"
+        panels.append(f'<dl data-ctcm-variant-fields="{escape(value, quote=True)}"{hidden}>{rows}</dl>')
+    html = f'<div id="ctcm-variant-metafields">{"".join(panels)}</div>'
+    return BlockResult(sections={"variant_metafields_panels": html})
+
+
+def block_core_runtime(context: dict[str, Any]) -> BlockResult:
     title = escape(str(context.get("site_title") or context.get("product_name") or "CTCM Product Page"))
     sections = context.get("_sections", {})
+    gallery_parts = "".join(sections.get(name, "") for name in (
+        "gallery_main_image", "gallery_thumbnails", "gallery_caption"
+    ))
+    product_media = f'<div class="ctcm-gallery" data-ctcm-gallery>{gallery_parts}</div>' if gallery_parts else ""
+    product_info = "".join(sections.get(name, "") for name in (
+        "product_title", "product_price", "product_description", "primary_action"
+    ))
+    product_section = ""
+    if product_media or product_info:
+        product_section = f'<section class="ctcm-product">{product_media}<div class="ctcm-product-info">{product_info}</div></section>'
+    information_parts = "".join(sections.get(name, "") for name in (
+        "information_heading", "information_tab_navigation", "information_tab_panels"
+    ))
+    information_section = (f'<section class="ctcm-section" data-ctcm-tabs>{information_parts}</section>'
+                           if information_parts else "")
+    addon_options = "".join(sections.get(name, "") for name in ("addon_heading", "addon_catalog"))
+    if addon_options:
+        addon_options = f'<div class="ctcm-addon-options">{addon_options}</div>'
+    addon_summary = "".join(sections.get(name, "") for name in (
+        "addon_summary_heading", "addon_selection_lines", "addon_total", "addon_submit_action"
+    ))
+    if addon_summary:
+        addon_summary = f'<aside class="ctcm-summary">{addon_summary}</aside>'
+    addon_section = ""
+    if addon_options or addon_summary:
+        base_cost = price_number(context.get("configurator_base_cost", 0))
+        multiplier = price_number(context.get("configurator_price_multiplier", 1), 1) or 1
+        empty = escape(str(context.get("empty_summary_text", "No items selected yet.")), quote=True)
+        addon_section = (f'<section class="ctcm-section" data-ctcm-configurator data-base-cost="{base_cost:.2f}" '
+                         f'data-price-multiplier="{multiplier:.4f}" data-empty-summary="{empty}">'
+                         f'<div class="ctcm-configurator-grid">{addon_options}{addon_summary}</div></section>')
     ordered_sections = [
-        sections.get("product_hero", ""),
-        sections.get("custom_field_tabs", ""),
-        sections.get("configurator", ""),
-        sections.get("metafields_panel", ""),
+        product_section,
+        information_section,
+        addon_section,
+        (f'<section class="ctcm-section ctcm-metafields">'
+         f'{sections.get("product_metafields_heading", "")}{sections.get("product_metafields_list", "")}</section>'
+         if sections.get("product_metafields_heading") or sections.get("product_metafields_list") else ""),
+        (f'<section class="ctcm-section ctcm-metafields">'
+         f'{sections.get("variant_metafields_heading", "")}{sections.get("variant_selector", "")}'
+         f'{sections.get("variant_metafields_panels", "")}</section>'
+         if any(sections.get(name) for name in ("variant_metafields_heading", "variant_selector", "variant_metafields_panels")) else ""),
     ]
     html = f"""<!doctype html>
 <html lang="en">
@@ -721,7 +876,10 @@ def block_site_shell(context: dict[str, Any]) -> BlockResult:
 </body>
 </html>
 """
-    return BlockResult(files={"index.html": html})
+    files = {"index.html": html}
+    files.update(block_base_styles(context).files or {})
+    files.update(block_base_interactions(context).files or {})
+    return BlockResult(files=files)
 
 
 def merge_result(context: dict[str, Any], result: BlockResult, output_files: dict[str, str]) -> None:
@@ -738,8 +896,8 @@ def assemble_site(context: dict[str, Any], block_names: list[str]) -> dict[str, 
 
     output_files: dict[str, str] = {}
     for name in block_names:
-        if name == "site_shell":
+        if name == "core_runtime":
             continue
         merge_result(context, get_block_callable(name)(context), output_files)
-    merge_result(context, block_site_shell(context), output_files)
+    merge_result(context, block_core_runtime(context), output_files)
     return output_files

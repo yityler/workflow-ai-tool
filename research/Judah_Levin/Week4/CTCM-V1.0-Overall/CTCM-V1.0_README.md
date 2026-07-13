@@ -1,1 +1,0 @@
-# CTCM Block Functions Version 1.0

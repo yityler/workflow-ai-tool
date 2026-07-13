@@ -93,7 +93,6 @@ def collect_required_inputs(context: dict[str, Any]) -> None:
         "Short product description",
         "A configurable product display page generated from CTCM block functions.",
     )
-    context["product_image"] = ask("Product image URL or local path", "")
     context["primary_cta_text"] = ask("Primary button text", "Add Base Product")
     context["primary_cta_url"] = ask("Primary button link URL", "")
     context["accent_color"] = ask("Accent color", "#0f766e")
@@ -106,6 +105,26 @@ def collect_required_inputs(context: dict[str, Any]) -> None:
     context["configurator_price_multiplier"] = "1"
     context["metafields_heading"] = "Metafields"
     context["variant_metafields_label"] = "Variant metafields"
+    context["variant_metafields_heading"] = "Variant Metafields"
+    context["addon_total_label"] = "Total"
+
+
+def collect_gallery(context: dict[str, Any]) -> None:
+    print("\nProduct gallery")
+    count_text = ask("How many product images?", "1")
+    try:
+        count = max(0, int(count_text))
+    except ValueError:
+        count = 1
+    images = []
+    for index in range(count):
+        url = ask(f"Image {index + 1} URL or local path", "")
+        alt = ask(f"Image {index + 1} alt text", f"{context.get('product_name', 'Product')} image {index + 1}")
+        caption = ask(f"Image {index + 1} caption", "")
+        if url:
+            images.append({"url": url, "alt": alt, "caption": caption})
+    context["product_images"] = images
+    context["product_image"] = images[0]["url"] if images else ""
 
 
 def collect_tabs(context: dict[str, Any]) -> None:
@@ -199,19 +218,41 @@ def choose_blocks(manifest: dict[str, Any]) -> list[str]:
     optional_blocks = [block for block in manifest["blocks"] if not block.get("required")]
     print("\nOptional blocks")
     for block in optional_blocks:
-        include = ask_yes_no(f"Include {block['name']}? {block['summary']}", block["name"] in {"custom_field_tabs", "configurator", "metafields_panel"})
+        default_blocks = {
+            "gallery_main_image", "gallery_thumbnails", "gallery_caption",
+            "product_title", "product_price", "product_description", "primary_action",
+            "information_heading", "information_tab_navigation", "information_tab_panels",
+            "addon_heading", "addon_catalog", "addon_summary_heading",
+            "addon_selection_lines", "addon_total", "addon_submit_action",
+            "product_metafields_heading", "product_metafields_list",
+            "variant_metafields_heading", "variant_selector", "variant_metafields_panels",
+        }
+        include = ask_yes_no(f"Include {block['name']}? {block['summary']}", block["name"] in default_blocks)
         if include:
             selected.append(block["name"])
+
+    block_by_name = {block["name"]: block for block in manifest["blocks"]}
+    pending = list(selected)
+    while pending:
+        name = pending.pop()
+        for dependency in block_by_name[name].get("dependencies", []):
+            if dependency not in selected:
+                selected.append(dependency)
+                pending.append(dependency)
 
     return selected
 
 
 def collect_optional_inputs(context: dict[str, Any], selected_blocks: list[str]) -> None:
-    if "custom_field_tabs" in selected_blocks:
+    gallery_blocks = {"gallery_main_image", "gallery_thumbnails", "gallery_caption"}
+    if gallery_blocks.intersection(selected_blocks):
+        collect_gallery(context)
+    if "information_tab_navigation" in selected_blocks or "information_tab_panels" in selected_blocks:
         collect_tabs(context)
-    if "configurator" in selected_blocks:
+    if "addon_catalog" in selected_blocks:
         collect_configurator(context)
-    if "metafields_panel" in selected_blocks:
+    metafield_blocks = {"product_metafields_list", "variant_selector", "variant_metafields_panels"}
+    if metafield_blocks.intersection(selected_blocks):
         collect_metafields(context)
 
 
@@ -261,6 +302,8 @@ TEXT_TOP_LEVEL = {
     "add_selected_text": "Add selected button text",
     "metafields_heading": "Metafields heading",
     "variant_metafields_label": "Variant metafields label",
+    "variant_metafields_heading": "Variant metafields heading",
+    "addon_total_label": "Add-on total label",
 }
 
 PRICING_TOP_LEVEL = {
@@ -272,10 +315,6 @@ LINK_TOP_LEVEL = {
     "primary_cta_url": "Primary button link URL",
 }
 
-IMAGE_TOP_LEVEL = {
-    "product_image": "Product image URL/path",
-}
-
 TEXT_DEFAULTS = {
     "product_info_heading": "Product Information",
     "configurator_heading": "Product Configurator",
@@ -284,6 +323,8 @@ TEXT_DEFAULTS = {
     "add_selected_text": "Add Selected",
     "metafields_heading": "Metafields",
     "variant_metafields_label": "Variant metafields",
+    "variant_metafields_heading": "Variant Metafields",
+    "addon_total_label": "Total",
     "configurator_base_cost": "0.00",
     "configurator_price_multiplier": "1",
 }
@@ -361,8 +402,12 @@ def build_content_model() -> dict:
         fields.append(field([key], label, value, kind))
     for key, label in LINK_TOP_LEVEL.items():
         fields.append(field([key], label, inputs.get(key, ""), "link"))
-    for key, label in IMAGE_TOP_LEVEL.items():
-        fields.append(field([key], label, inputs.get(key, ""), "image"))
+    for index, image in enumerate(inputs.get("product_images", [])):
+        if isinstance(image, str):
+            image = {"url": image, "alt": "", "caption": ""}
+        fields.append(field(["product_images", index, "url"], f"Gallery image {index + 1} URL/path", image.get("url", ""), "image"))
+        fields.append(field(["product_images", index, "alt"], f"Gallery image {index + 1} alt text", image.get("alt", ""), "text"))
+        fields.append(field(["product_images", index, "caption"], f"Gallery image {index + 1} caption", image.get("caption", ""), "text"))
 
     for index, tab in enumerate(inputs.get("tabs", [])):
         fields.append(field(["tabs", index, "title"], f"Tab {index + 1} title", tab.get("title", ""), "text"))
@@ -391,6 +436,7 @@ def build_content_model() -> dict:
     model = {
         "notice": "Editable content only: text, links, and image URLs/paths. Styling and layout are locked in the block functions.",
         "fields": fields,
+        "selected_blocks": read_json(CONFIG_PATH).get("selected_blocks", []),
     }
     write_json(CONTENT_PATH, model)
     return model
@@ -666,6 +712,7 @@ BACKEND_ADMIN_CSS = r'''body {
 
 BACKEND_ADMIN_JS = r'''let fields = [];
 let fieldMap = new Map();
+let selectedBlocks = new Set();
 let selectedImageFieldId = null;
 const IMAGE_OUTPUT_TYPE = "image/webp";
 const IMAGE_OUTPUT_QUALITY = 0.92;
@@ -747,6 +794,14 @@ function getItems(prefix) {
     .sort((a, b) => a.id.localeCompare(b.id));
 }
 
+function hasBlock(name) {
+  return selectedBlocks.has(name);
+}
+
+function galleryIndexes() {
+  return [...new Set(getItems("product_images.").map((field) => field.path[1]))].sort((a, b) => a - b);
+}
+
 function tabIndexes() {
   return [...new Set(getItems("tabs.").map((field) => field.path[1]))].sort((a, b) => a - b);
 }
@@ -773,22 +828,41 @@ function variantFieldIndexes(variantIndex) {
   return [...new Set(getItems(prefix).map((field) => field.path[3]))].sort((a, b) => a - b);
 }
 
+function renderGallery() {
+  const indexes = galleryIndexes();
+  if (!hasBlock("gallery_main_image") && !hasBlock("gallery_thumbnails") && !hasBlock("gallery_caption")) return "";
+  const first = indexes[0];
+  const main = hasBlock("gallery_main_image")
+    ? (first === undefined ? `<div class="ctcm-media"><div class="ctcm-media-placeholder">Image</div></div>` : imageSlot(`product_images.${first}.url`, "ctcm-media ctcm-gallery-main", byId(`product_images.${first}.alt`).value))
+    : "";
+  const thumbnails = hasBlock("gallery_thumbnails")
+    ? `<div class="ctcm-gallery-thumbnails">${indexes.map((index) => imageSlot(`product_images.${index}.url`, "ctcm-gallery-thumbnail", byId(`product_images.${index}.alt`).value)).join("")}</div>`
+    : "";
+  const caption = hasBlock("gallery_caption") && first !== undefined
+    ? editable(`product_images.${first}.caption`, "p", "ctcm-gallery-caption") : "";
+  return `<div class="ctcm-gallery">${main}${thumbnails}${caption}</div>`;
+}
+
 function renderHero() {
+  const info = [
+    hasBlock("product_title") ? editable("product_name", "h1", "ctcm-title") : "",
+    hasBlock("product_price") ? editable("product_price", "p", "ctcm-price") : "",
+    hasBlock("product_description") ? editable("product_description", "p", "ctcm-description") : "",
+    hasBlock("primary_action") ? `<span class="ctcm-button" contenteditable="true" data-edit-text="primary_cta_text">${html(byId("primary_cta_text").value || "Add Base Product")}</span>${linkInput("primary_cta_url", "Primary button link")}` : ""
+  ].join("");
+  const gallery = renderGallery();
+  if (!gallery && !info) return "";
   return `<section class="ctcm-product">
-    ${imageSlot("product_image", "ctcm-media", byId("product_name").value)}
+    ${gallery}
     <div class="ctcm-product-info">
-      ${editable("product_name", "h1", "ctcm-title")}
-      ${editable("product_price", "p", "ctcm-price")}
-      ${editable("product_description", "p", "ctcm-description")}
-      <span class="ctcm-button" contenteditable="true" data-edit-text="primary_cta_text">${html(byId("primary_cta_text").value || "Add Base Product")}</span>
-      ${linkInput("primary_cta_url", "Primary button link")}
+      ${info}
     </div>
   </section>`;
 }
 
 function renderTabs() {
+  if (!hasBlock("information_heading") && !hasBlock("information_tab_navigation") && !hasBlock("information_tab_panels")) return "";
   const indexes = tabIndexes();
-  if (!indexes.length) return "";
   const buttons = indexes.map((index, i) => {
     const active = i === 0 ? " is-active" : "";
     return `<li><button class="ctcm-tab-button${active}" type="button" data-ctcm-tab="admin-tab-${index}">
@@ -800,15 +874,16 @@ function renderTabs() {
     return `<div class="ctcm-tab-panel${active}" id="admin-tab-${index}" data-ctcm-tab-panel contenteditable="true" data-edit-text="tabs.${index}.content">${html(byId(`tabs.${index}.content`).value)}</div>`;
   }).join("");
   return `<section class="ctcm-section" data-ctcm-tabs>
-    ${editable("product_info_heading", "h2")}
-    <ul class="ctcm-tabs-list">${buttons}</ul>
-    ${panels}
+    ${hasBlock("information_heading") ? editable("product_info_heading", "h2") : ""}
+    ${hasBlock("information_tab_navigation") ? `<ul class="ctcm-tabs-list">${buttons}</ul>` : ""}
+    ${hasBlock("information_tab_panels") ? panels : ""}
   </section>`;
 }
 
 function renderConfigurator() {
+  const addonNames = ["addon_heading", "addon_catalog", "addon_summary_heading", "addon_selection_lines", "addon_total", "addon_submit_action"];
+  if (!addonNames.some(hasBlock)) return "";
   const cats = categoryIndexes();
-  if (!cats.length) return "";
   const baseCost = parsePrice(byId("configurator_base_cost").value);
   const categories = cats.map((categoryIndex, i) => {
     const itemIndexes = categoryItemIndexes(categoryIndex);
@@ -841,16 +916,14 @@ function renderConfigurator() {
     </div>`;
   }).join("");
   return `<section class="ctcm-section" data-ctcm-configurator>
-    ${editable("configurator_heading", "h2")}
+    ${hasBlock("addon_heading") ? editable("configurator_heading", "h2") : ""}
     <div class="ctcm-configurator-grid">
-      <div>${categories}</div>
+      <div>${hasBlock("addon_catalog") ? categories : ""}</div>
       <aside class="ctcm-summary">
-        ${editable("summary_heading", "h3")}
-        <div><p contenteditable="true" data-edit-text="empty_summary_text">${html(byId("empty_summary_text").value)}</p></div>
-        <div class="ctcm-summary-total"><span>Total</span><span>${money(baseCost)}</span></div>
-        ${pricingInput("configurator_base_cost", "Base item cost before configurations", "price")}
-        ${pricingInput("configurator_price_multiplier", "Configuration price multiplier", "multiplier")}
-        <span class="ctcm-button" contenteditable="true" data-edit-text="add_selected_text">${html(byId("add_selected_text").value)}</span>
+        ${hasBlock("addon_summary_heading") ? editable("summary_heading", "h3") : ""}
+        ${hasBlock("addon_selection_lines") ? `<div><p contenteditable="true" data-edit-text="empty_summary_text">${html(byId("empty_summary_text").value)}</p></div>` : ""}
+        ${hasBlock("addon_total") ? `<div class="ctcm-summary-total"><span contenteditable="true" data-edit-text="addon_total_label">${html(byId("addon_total_label").value)}</span><span>${money(baseCost)}</span></div>${pricingInput("configurator_base_cost", "Base item cost before configurations", "price")}${pricingInput("configurator_price_multiplier", "Configuration price multiplier", "multiplier")}` : ""}
+        ${hasBlock("addon_submit_action") ? `<span class="ctcm-button" contenteditable="true" data-edit-text="add_selected_text">${html(byId("add_selected_text").value)}</span>` : ""}
       </aside>
     </div>
   </section>`;
@@ -859,19 +932,18 @@ function renderConfigurator() {
 function renderMetafields() {
   const base = baseMetafieldIndexes();
   const variants = variantIndexes();
-  if (!base.length && !variants.length) return "";
+  const productSelected = hasBlock("product_metafields_heading") || hasBlock("product_metafields_list");
+  const variantSelected = hasBlock("variant_metafields_heading") || hasBlock("variant_selector") || hasBlock("variant_metafields_panels");
+  if (!productSelected && !variantSelected) return "";
   const baseRows = base.map((index) => `<dt contenteditable="true" data-edit-text="base_metafields.${index}.key">${html(byId(`base_metafields.${index}.key`).value)}</dt><dd contenteditable="true" data-edit-text="base_metafields.${index}.value">${html(byId(`base_metafields.${index}.value`).value)}</dd>`).join("");
   const variantOptions = variants.map((index) => `<option>${html(byId(`variant_metafields.${index}.variant`).value)}</option>`).join("");
   const variantRows = variants.map((variantIndex) => {
     const rows = variantFieldIndexes(variantIndex).map((fieldIndex) => `<dt contenteditable="true" data-edit-text="variant_metafields.${variantIndex}.fields.${fieldIndex}.key">${html(byId(`variant_metafields.${variantIndex}.fields.${fieldIndex}.key`).value)}</dt><dd contenteditable="true" data-edit-text="variant_metafields.${variantIndex}.fields.${fieldIndex}.value">${html(byId(`variant_metafields.${variantIndex}.fields.${fieldIndex}.value`).value)}</dd>`).join("");
     return `<dl>${rows}</dl>`;
   }).join("");
-  const variantBlock = variants.length ? `<label><span contenteditable="true" data-edit-text="variant_metafields_label">${html(byId("variant_metafields_label").value)}</span><select>${variantOptions}</select></label>${variantRows}` : "";
-  return `<section class="ctcm-section ctcm-metafields">
-    ${editable("metafields_heading", "h2")}
-    <dl>${baseRows}</dl>
-    ${variantBlock}
-  </section>`;
+  const productBlock = productSelected ? `<section class="ctcm-section ctcm-metafields">${hasBlock("product_metafields_heading") ? editable("metafields_heading", "h2") : ""}${hasBlock("product_metafields_list") ? `<dl>${baseRows}</dl>` : ""}</section>` : "";
+  const variantBlock = variantSelected ? `<section class="ctcm-section ctcm-metafields">${hasBlock("variant_metafields_heading") ? editable("variant_metafields_heading", "h2") : ""}${hasBlock("variant_selector") && variants.length ? `<label><span contenteditable="true" data-edit-text="variant_metafields_label">${html(byId("variant_metafields_label").value)}</span><select>${variantOptions}</select></label>` : ""}${hasBlock("variant_metafields_panels") ? variantRows : ""}</section>` : "";
+  return productBlock + variantBlock;
 }
 
 function renderEditor() {
@@ -1022,6 +1094,7 @@ async function loadContent() {
   const response = await fetch("/api/content");
   const model = await response.json();
   fields = model.fields || [];
+  selectedBlocks = new Set(model.selected_blocks || []);
   fieldMap = new Map(fields.map((field) => [field.id, field]));
   renderEditor();
 }
