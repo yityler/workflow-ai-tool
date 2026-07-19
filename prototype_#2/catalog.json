@@ -1,0 +1,19 @@
+{
+  "enterprise": "Demo Mart",
+  "currency": "SGD",
+  "gst_rate": 0.09,
+  "products": [
+    {"sku": "SS-001", "name": "Classic Sticky Notes", "category": "Stationery", "price": 2.50, "description": "3x3 inch pad, 100 sheets. RFID-tagged for instant checkout."},
+    {"sku": "SS-002", "name": "Neon Sticky Notes", "category": "Stationery", "price": 3.00, "description": "3x3 inch pad, 100 sheets, five neon colours. RFID-tagged."},
+    {"sku": "SS-003", "name": "Sticky Notes Value Pack", "category": "Stationery", "price": 24.00, "description": "Twelve assorted pads in one RFID-tagged bundle."},
+    {"sku": "SS-010", "name": "Smart Notebook A5", "category": "Notebooks", "price": 18.90, "description": "Reusable A5 notebook, wipe-clean pages, RFID spine tag."},
+    {"sku": "SS-011", "name": "Smart Notebook A4", "category": "Notebooks", "price": 24.90, "description": "Reusable A4 notebook, wipe-clean pages, RFID spine tag."},
+    {"sku": "SS-020", "name": "RFID Smart Pen", "category": "Writing", "price": 12.50, "description": "Ballpoint pen with embedded RFID tag for tap-to-pair."},
+    {"sku": "SS-021", "name": "Gel Pen 4-pack", "category": "Writing", "price": 5.20, "description": "Four smooth gel pens, assorted ink colours."},
+    {"sku": "SS-022", "name": "Highlighter Set", "category": "Writing", "price": 6.80, "description": "Five-colour highlighter set with chisel tips."},
+    {"sku": "SS-030", "name": "RFID Luggage Tag", "category": "RFID Accessories", "price": 9.90, "description": "Durable travel tag with embedded RFID chip."},
+    {"sku": "SS-031", "name": "RFID Wallet Card Holder", "category": "RFID Accessories", "price": 19.90, "description": "Slim card holder with RFID-shielding lining."},
+    {"sku": "SS-032", "name": "Reusable RFID Sticker Pack", "category": "RFID Accessories", "price": 15.00, "description": "Ten programmable RFID stickers for tagging anything."},
+    {"sku": "SS-040", "name": "Desk Organiser", "category": "Desk", "price": 22.00, "description": "Six-compartment organiser for pens, pads, and tags."}
+  ]
+}

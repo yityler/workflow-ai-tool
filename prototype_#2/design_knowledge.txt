@@ -1,0 +1,191 @@
+DESIGN KNOWLEDGE BASE
+Curated from the teachings of human designers and design research. Used as the RAG source for
+the storefront generator: the relevant chunks below are retrieved and given to the AI at design
+time, so the prompt itself only carries company-specific information.
+
+TOPIC: TIMELESS DESIGN PRINCIPLES (Dieter Rams, industrial designer, Braun)
+Good design is as little design as possible: less, but better, because it concentrates on the
+essential aspects. Good design is unobtrusive — products are like tools, neutral and restrained.
+Good design is honest: it does not make a product seem more valuable than it is. Good design is
+thorough down to the last detail: nothing arbitrary, nothing left to chance; care and accuracy
+show respect for the user. Good design makes a product understandable — at best, it makes the
+product talk. For a screen: remove every element that does not help the customer act, and make
+the remaining elements explain themselves.
+
+TOPIC: THE FOUR BASIC PRINCIPLES — CONTRAST, REPETITION, ALIGNMENT, PROXIMITY (Robin Williams,
+The Non-Designer's Design Book)
+Contrast: if two elements are not the same, make them very different — timid differences read as
+mistakes. Repetition: repeat visual treatments (colors, weights, spacing, corner radii) through
+the whole design to unify it. Alignment: nothing should be placed arbitrarily; every element
+should have a visual connection to another element — pick one strong alignment edge and keep it.
+Proximity: group related items close together so they read as one unit; separate unrelated items
+with real space. Most amateur designs fail on proximity and alignment before anything else.
+
+TOPIC: TYPOGRAPHY DISCIPLINE (Massimo Vignelli, the Vignelli Canon)
+Use very few typefaces — one or two, chosen well, used with discipline. Type size changes should
+be meaningful jumps, not timid steps. The grid is the underwear of design: align text to a
+consistent structure. White space is not empty space; it is what gives typography its dignity.
+For a kiosk screen: one type family, three sizes maximum, weights doing the hierarchy work.
+
+TOPIC: COLOR HARMONY AND THE COLOR WHEEL (Johannes Itten, Bauhaus)
+Reliable palette recipes from the color wheel: monochromatic (tints and shades of one hue) is
+cohesive and almost impossible to get wrong — the safest scheme for a branded interface, derive
+light tints of the brand hue for backgrounds and accents. Analogous (adjacent hues) feels calm
+and unified. Complementary (opposite hues) creates maximum tension — use only for the one element
+that must grab attention, never for large areas. In practice for UI: build the interface almost
+entirely from neutrals plus tints of the single brand hue; introduce a second hue only with a
+clear job to do.
+
+TOPIC: COLOR PROPORTION AND RESTRAINT (60-30-10 rule; Refactoring UI, Adam Wathan and Steve
+Schoger)
+Distribute color 60-30-10: about 60% neutral background, 30% surfaces and secondary elements,
+10% accent. The accent color is a budget — spend it only on the price, the primary action, and
+at most one highlight. Greys should not be pure grey: tint them slightly toward the brand hue
+(cool blue-greys for cool brands, warm stone-greys for warm brands). Text hierarchy needs only
+three colors: near-black for primary, medium grey for secondary, light grey for tertiary. Never
+use pure black on pure white; soften both slightly. Always keep text contrast accessible: dark
+text on light backgrounds, light text on dark accents.
+
+TOPIC: COLOR PSYCHOLOGY IN RETAIL
+Blue reads as trust, security, and calm — the most common choice for payment moments. Green reads
+as freshness, health, and go/confirm. Red stimulates urgency and action but raises anxiety at
+payment; use sparingly near totals. Black and charcoal read premium and minimal. Warm neutrals
+(cream, stone) read friendly and boutique; cool neutrals read modern and technical. Whatever the
+brand color, do not fight it: derive the mood from the brand hue rather than introducing a
+clashing scheme at checkout, where trust matters most.
+
+TOPIC: TYPOGRAPHIC HIERARCHY AND READABILITY
+Use a deliberate type scale with meaningful jumps (for example 13, 15, 20, 26, 32) — adjacent
+sizes must differ enough to signal different levels. Prefer changing weight (600-700 versus 400)
+over adding more sizes. Body text line-height around 1.5; large headings tighter, around 1.2.
+Keep line length between 45 and 75 characters. Align mixed-size text on the baseline. Sans-serif
+projects clean, modern, honest — the default for screens; serif projects tradition and authority.
+Labels: remove them when the value is self-evident ("Jane Doe" not "Name: Jane Doe"); combine
+label and value into one phrase ("12 left in stock"). Right-align numbers so they compare easily.
+
+TOPIC: SPACING, LAYOUT, AND WHITESPACE
+Design on an 8-point grid: all padding, margins, and gaps in multiples of 8 (8, 16, 24, 32, 48).
+Start with too much whitespace and remove until it feels right — cramped is the most common
+amateur mistake. Always more space BETWEEN groups than WITHIN them, or grouping becomes
+ambiguous. Constrain content width rather than filling the screen edge to edge. Use soft
+two-layer shadows to separate surfaces instead of borders; use background-color changes and
+spacing before reaching for lines. Consistent corner radii everywhere — pick one radius family.
+
+TOPIC: VISUAL HIERARCHY AND FOCAL POINT
+Every screen needs exactly one focal point — decide what the customer must see first and make it
+unmissable through size, color, and position; then actively de-emphasize everything else rather
+than emphasizing more things. Users scan in an F or Z pattern from the top left: put the message
+at the top, the action at the natural end point. A visually pleasing design uses no more than
+three sizes of anything. If everything is bold, nothing is bold.
+
+TOPIC: PRODUCT PAGE DESIGN FOR RETAIL
+The product presentation (image or visual tile) and the name carry the page; give them room. Show
+the price near the product identity, large and unambiguous, with tax context in small muted text
+beside it — never hide costs (hidden costs are the top reason buyers abandon). One primary
+call-to-action per page, styled as the single loudest element. Supporting details (SKU, category,
+description) are secondary: smaller, muted, never competing with name, price, or action.
+
+TOPIC: CHECKOUT AND PAYMENT UX (Baymard Institute research)
+Checkout succeeds through perceived simplicity: show a clear itemized order summary, keep the
+arithmetic (subtotal, tax) small and muted, and make the final total the single dominant number
+on the screen. Exactly one prominent call-to-action ("Pay now") with nothing competing near it.
+A clean, professional, bug-free appearance directly increases trust — people judge security by
+polish. Remove every distraction from the payment moment; reassure with a short line about help
+or safety near the action. Show progress or completion cues — people accelerate as they near the
+end (goal-gradient effect), and remember the ending most (peak-end rule).
+
+TOPIC: KIOSK AND TOUCHSCREEN ERGONOMICS
+Design for a standing customer at arm's length who decides in about three seconds. Touch targets
+minimum 48 pixels tall with clear spacing between tappable things; the primary button should be
+the biggest, easiest target on screen (Fitts's law). Body text noticeably larger than on desktop
+web. Show at most five to six content blocks per screen (Miller's law); fewer choices mean faster
+decisions (Hick's law). Follow familiar retail patterns rather than inventing novel layouts
+(Jakob's law). Plain language, icons with labels, help always one obvious tap away.
+
+TOPIC: MICROCOPY AND VOICE FOR SELF-SERVICE RETAIL
+Voice: warm, confident, plain. Short sentences. No jargon, no technical terms, at most one
+exclamation mark per screen. Headlines reassure and instruct in five words or fewer ("Just place
+your items down"). Calls-to-action start with a verb and stay under three words ("Pay now",
+"Start scanning"). Use reassurance where anxiety happens: near payment, near totals, near
+anything automatic ("Everything detected automatically"). Highlight at most ONE offer — a
+highlight is only memorable when it is rare (Von Restorff effect). Attractive, polished screens
+are perceived as easier to use and more trustworthy (aesthetic-usability effect).
+
+TOPIC: AVOIDING THE GENERIC AI-GENERATED LOOK
+Viewers can instantly recognize machine-generated design by its tells: identical padding,
+identical corner radius, and identical card heights everywhere; every section centered; flat
+visual rhythm where each band gets equal weight; default indigo-purple gradients; and vague
+aspirational copy. Human-made design shows intention: alignment varies purposefully (a
+left-aligned hero reads more editorial than a centered one), spacing breathes differently
+between sections, ONE element per screen gets a memorable treatment while the rest stay quiet,
+and every color has a job rather than being decoration. The single strongest fix is specificity:
+real product names, real numbers, real details of THIS store — averaged, could-be-anyone design
+is what reads as machine-made.
+
+TOPIC: BUILDING A FULL PALETTE FROM ONE BRAND COLOR (HSL tonal scales)
+Professional palettes are derived, not picked: keep the brand color's HUE constant and move
+lightness and saturation to build a tonal scale from near-white (steps 50-100) to near-black
+(steps 900-950). Tints: raise lightness toward 97% and cut saturation by 30-70% — these become
+backgrounds and hover states. Shades: lower lightness and reduce saturation slightly (15-25%)
+— these become text and emphasis. Crucially, even the "greys" should carry a whisper of the
+brand hue: hue-tinted neutrals are what make a page feel art-directed instead of assembled.
+Never use pure black text or pure grey surfaces; tint everything gently toward the brand.
+
+TOPIC: SPECIFICITY AND VOICE — COPY THAT SOUNDS HUMAN
+Generic AI copy hedges and inflates: "effortless", "seamless", "elevate", "unlock", "world-class".
+Human copy commits to specifics: name the actual thing, the actual number, the actual moment
+("Set your basket down — every tag reads in one second" beats "Experience seamless checkout").
+Write in one consistent voice from header to footer. Prefer verbs and nouns over adjectives.
+One idea per line. If a sentence could appear on any store's website, it is not finished —
+rewrite it with a detail only this store could claim.
+
+TOPIC: RHYTHM, ASYMMETRY, AND THE ONE MEMORABLE MOMENT
+Uniformity reads as machine-made; rhythm reads as designed. Vary section spacing deliberately:
+let the hero breathe with generous padding, keep utility rows compact. Mix alignments with
+intent — hero text left-aligned with an off-center visual creates editorial energy; reserve
+centering for single focal moments like a total or confirmation. Give each screen exactly one
+memorable treatment (an oversized number, a bold accent band, an unexpected crop) and keep
+everything else restrained so the moment lands. Slightly varied corner radii and asymmetric
+column widths (a 60/40 split instead of 50/50) are quiet signals of human intention.
+
+TOPIC: WRITING FOR THE WEB — HOW PEOPLE ACTUALLY READ (Nielsen Norman eyetracking research)
+People do not read screens; they scan them. 79% of users scan every new page; they read at most
+20-28% of the words, in an F-shaped pattern: across the top, a shorter sweep below, then down the
+left edge. Therefore: front-load — the first two words of every heading, sentence, and bullet
+must carry the information, because those are the words the scanning eye actually lands on. Put
+the conclusion first, details after. Write half the words you would write on paper, then cut
+half again. One idea per paragraph. Use meaningful subheadings and bullets so the left edge of
+the text tells the whole story. Write numbers as numerals (9%, 3 items) — numerals stop the
+scanning eye, spelled-out numbers do not. High-quality writing is what converts a scanner into
+a reader.
+
+TOPIC: WHAT NOT TO WRITE — HAPPY TALK AND NEEDLESS WORDS (Steve Krug, Don't Make Me Think)
+Happy talk must die: content-free welcome text ("Welcome to our store! We're so glad you're
+here...") is small talk that costs attention and delivers nothing — customers want the point.
+If a sentence only exists to be sociable, delete it. Omit needless words and empty modifiers:
+"very", "really", "world-class", "state-of-the-art" add length, not meaning. Nobody reads
+instructions — design things to be self-explanatory; when guidance is unavoidable, make it
+brief, timely, and impossible to miss. Prefer active voice ("We detected 3 items" not "3 items
+have been detected"). Prefer positive phrasing over negative. Clear always beats clever: a plain
+label that works outranks a witty one that makes someone think. Buttons must name the action
+that happens next, starting with a verb ("Pay now", "View basket") — never "Click here",
+"Submit", or "OK".
+
+TOPIC: TYPEFACE PERSONALITY — MATCHING THE FONT TO THE BUSINESS
+A typeface is the brand's voice made visible; choose it from the business, not from habit.
+Serif faces (Playfair Display, Lora, Cormorant) read as heritage, luxury, authority, and
+tradition — right for premium, financial, and established brands; research links serifs to
+higher perceived trustworthiness. Clean geometric sans-serifs (Space Grotesk, Work Sans,
+Futura-likes) read as modern, technological, efficient — right for tech-forward and minimal
+brands. Rounded sans-serifs (Nunito, Quicksand) read as warm, friendly, approachable — right
+for family, community, and everyday retail brands. Condensed display faces (Bebas Neue) read
+as loud, confident, fashionable — right for bold youth-oriented brands, used for headlines
+only. Script and handwritten faces (Dancing Script, Pacifico) read as artisanal, personal,
+and crafted by hand — right for candle shops, bakeries, florists, and boutique makers;
+keep script to headings only and pair it with a plain sans body for legibility. Match the
+trade, not a generic mood: a candle store wants script warmth, a sports-equipment store
+wants a bold condensed display, a bank or pharmacy wants a trustworthy serif, a gadget
+brand wants a clean geometric sans. Pairing rule: contrast without conflict — one distinctive display face for headings,
+one neutral workhorse for body text, and never more than two families. Using the default
+system font everywhere is a tell of machine-generated design; a deliberate display face is
+the fastest way to look art-directed.
