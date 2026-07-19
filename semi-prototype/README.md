@@ -15,7 +15,7 @@ GEMINI_API_KEY=
 MISTRAL_API_KEY=
 HF_TOKEN=
 ```
-5. Run it through the following: `python -m prototype.main`
+5. Run it through the following: `python -m semi-prototype.main`
 
 ## Module Summary
 ### 1. The Interface & Context Layer (`prototype/input/`)

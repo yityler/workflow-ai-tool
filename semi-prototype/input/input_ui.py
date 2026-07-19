@@ -85,8 +85,6 @@ def _default_generate_fn(
     product_files,
     theme_files,
 ):
-    """Fallback used only if build_ui() isn't given a real pipeline function.
-    Keeps the UI usable in isolation (e.g. quick manual testing of the form)."""
     prompt, err = build_prompt(
         product_description=product_description,
         industry=industry,
@@ -105,13 +103,26 @@ def _default_generate_fn(
     return prompt, "", "", "No pipeline function was wired in — showing the formatted prompt only.", None
 
 
-def _default_apply_change_fn(instruction, template):
-    return "", "", "No pipeline function was wired in — changes can't be applied.", template
+def _default_reorder_fn(order_json, template):
+    return "", "", "No pipeline function was wired in — reordering can't be applied.", template
+
+
+REORDER_BRIDGE_HEAD = """
+<script>
+window.addEventListener('message', function (event) {
+  var data = event.data;
+  if (!data || data.source !== 'cornerstone-preview' || data.type !== 'reorder') return;
+  var box = document.querySelector('#cornerstone_reorder_box textarea')
+         || document.querySelector('#cornerstone_reorder_box input');
+  if (!box) return;
+  box.value = JSON.stringify(data.order);
+  box.dispatchEvent(new Event('input', { bubbles: true }));
+});
+</script>
+"""
 
 
 def build_submit_fn(generate_fn):
-    """Wraps whatever pipeline function main.py provides so it can be plugged
-    straight into the Gradio button's `fn=`."""
 
     def submit_AI(
         product_description,
@@ -142,18 +153,9 @@ def build_submit_fn(generate_fn):
 
     return submit_AI
 
-def build_ui(generate_fn=None, apply_change_fn=None):
-    """
-    generate_fn: the full pipeline function to call when "Generate" is clicked.
-    Signature must match submit_AI's args and return
-    (prompt_preview, layout_json, preview_link_html, report, template).
-    apply_change_fn: called when "Apply Changes" is clicked, with
-    (instruction, template) and returning (layout_json, preview_link_html,
-    report, template).
-    Both fall back to stubs so this module still runs standalone.
-    """
+def build_ui(generate_fn=None, reorder_fn=None):
     submit_AI = build_submit_fn(generate_fn or _default_generate_fn)
-    apply_changes = apply_change_fn or _default_apply_change_fn
+    reorder = reorder_fn or _default_reorder_fn
 
     with gr.Blocks(title="Product Prompt Builder") as app:
         gr.Markdown("## Product Prompt Builder\nFill in what you know about the product and how you want the page to feel. Hit Generate when you're ready.")
@@ -261,20 +263,12 @@ def build_ui(generate_fn=None, apply_change_fn=None):
             outputs=[prompt_preview, layout_out, preview_link_out, report_out, template_state],
         )
 
-        gr.Markdown("### Request Changes\nTell the AI what you'd like different about the generated page. "
-                     "This is applied as a targeted edit to just the relevant section, not a full regeneration.")
-        with gr.Row():
-            change_request = gr.Textbox(
-                label="What would you like to change?",
-                placeholder="e.g. make the hero heading punchier, add a 4th testimonial, make the CTA button text more urgent...",
-                lines=2,
-                scale=3,
-            )
-            apply_btn = gr.Button("Apply Changes", variant="secondary", scale=1)
+        gr.Markdown("### Reorder Sections\nDrag any section directly in the Live Preview above")
+        reorder_box = gr.Textbox(elem_id="cornerstone_reorder_box", visible=False)
 
-        apply_btn.click(
-            fn=apply_changes,
-            inputs=[change_request, template_state],
+        reorder_box.input(
+            fn=reorder,
+            inputs=[reorder_box, template_state],
             outputs=[layout_out, preview_link_out, report_out, template_state],
         )
 

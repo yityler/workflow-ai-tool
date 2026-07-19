@@ -1,7 +1,3 @@
-"""
-AI Product Information Page Layout Generator for Cornerstone UI.
-Returns JSON Layout Specifications for Cornerstone Frontend
-"""
 
 import json
 import os
@@ -417,15 +413,19 @@ def template_path(
     brand,
     page_type,
     layout_instructions="",
-    reference_notes=""
+    reference_notes="",
+    available_images=None,
 ):
+
+    image_key = "|".join(sorted(img["id"] for img in (available_images or [])))
 
     key = (
         f"{product_name}|"
         f"{brand}|"
         f"{page_type}|"
         f"{layout_instructions.strip().lower()}|"
-        f"{reference_notes.strip().lower()}"
+        f"{reference_notes.strip().lower()}|"
+        f"{image_key}"
     )
 
     hashed = hashlib.md5(
@@ -439,6 +439,49 @@ def template_path(
     )
 
 
+# ============================================================
+# RAG image inventory — lets the layout model choose which
+# uploaded/reference images go in which component
+# ============================================================
+
+def _format_image_inventory(available_images):
+    """Turns [{"id","caption","source"}, ...] into a block the layout model
+    can read, so it can decide which image (if any) belongs in which
+    component instead of the pipeline always hardcoding one hero image."""
+    if not available_images:
+        return "No reference images were uploaded for this request."
+
+    lines = []
+    for img in available_images:
+        caption = img.get("caption") or "(no description available)"
+        source = img.get("source", "reference")
+        lines.append(f'- id: "{img["id"]}" — source: {source} — shows: {caption}')
+    return "\n".join(lines)
+
+
+def _resolve_component_image_ref(component, by_id):
+    content = component.content or {}
+    ref = content.pop("image_ref", None)
+    if ref and ref in by_id:
+        content["image"] = by_id[ref]
+    component.content = content
+    return component
+
+
+def resolve_image_refs(template, available_images):
+    """Post-processes a generated/cached template: wherever a component's
+    `content` contains an `image_ref` pointing at one of the uploaded RAG
+    images' ids, replace it with the actual local `image` path so the
+    renderer/preview can display it. Unknown or missing ids are dropped
+    rather than left as a dangling reference."""
+    by_id = {img["id"]: img["path"] for img in (available_images or [])}
+
+    for component in template.components:
+        _resolve_component_image_ref(component, by_id)
+
+    return template
+
+
 
 # ============================================================
 # Generate Cornerstone Layout Template
@@ -450,7 +493,8 @@ def get_template(
     brand_color,
     key,
     layout_instructions="",
-    reference_notes=""
+    reference_notes="",
+    available_images=None,
 ):
 
     """
@@ -464,7 +508,8 @@ def get_template(
         brand,
         "product_information",
         layout_instructions,
-        reference_notes
+        reference_notes,
+        available_images,
     )
 
 
@@ -479,12 +524,12 @@ def get_template(
             encoding="utf-8"
         ) as f:
 
-            return (
-                ProductPageTemplate(
-                    **json.load(f)
-                ),
-                True
-            )
+            template = ProductPageTemplate(**json.load(f))
+
+        return (
+            resolve_image_refs(template, available_images),
+            True
+        )
 
 
     # ----------------------------
@@ -556,6 +601,27 @@ factual and stylistic context. Your output must still
 follow the Cornerstone JSON contract defined below.
 
 {reference_notes.strip() if reference_notes and reference_notes.strip() else "No additional intake context provided."}
+
+
+========================
+
+AVAILABLE REFERENCE IMAGES (from RAG / user uploads)
+
+These are real images already available to the pipeline (uploaded by the
+user as product photos or brand/theme references). You do NOT generate or
+describe new images here — you only decide WHICH of these, if any, belongs
+in WHICH component.
+
+{_format_image_inventory(available_images)}
+
+If (and only if) one of the images above is genuinely appropriate for a
+component (e.g. a product photo for `product_visual`, a person's photo for
+a `testimonial`, a lifestyle shot for a `benefits` item), set that
+component's `content` to include an `"image_ref"` key whose value is the
+exact `id` string from the list above — copy it exactly, do not invent new
+ids. Do not add `image_ref` to a component if no listed image is actually a
+good fit for it; it is fine, and expected, for most components to have no
+`image_ref` at all. Never reference an id that is not in the list above.
 
 
 ========================
@@ -661,7 +727,7 @@ Only generate the layout JSON.
         )
 
 
-    return template, False
+    return resolve_image_refs(template, available_images), False
 
 
 
@@ -673,7 +739,8 @@ def edit_component(
     template,
     component_id,
     instruction,
-    key
+    key,
+    available_images=None,
 ):
 
     """
@@ -719,6 +786,15 @@ Current component:
 {target.model_dump_json()}
 
 
+AVAILABLE REFERENCE IMAGES (from RAG / user uploads):
+
+{_format_image_inventory(available_images)}
+
+If the instruction asks to add, change, or swap an image, set `content.image_ref`
+to the exact `id` of the best-fitting image above (copy it exactly — do not
+invent ids). Leave `image_ref` out entirely if no listed image fits or the
+instruction isn't about images.
+
 Return only the updated component JSON.
 """
 
@@ -730,6 +806,8 @@ Return only the updated component JSON.
         Component
     )
 
+    by_id = {img["id"]: img["path"] for img in (available_images or [])}
+    updated = _resolve_component_image_ref(updated, by_id)
 
     template.components = [
 

@@ -1,14 +1,15 @@
 
 
+import json
 import os
-import re
 import tempfile
 import time
+import uuid
 
 import litellm
 from pydantic import BaseModel
 
-from .input.input_ui import build_ui
+from .input.input_ui import build_ui, REORDER_BRIDGE_HEAD
 from .input.input_build_prompt import build_prompt
 from .input.input_rag import analyze_files
 from .Tyler_Yi_Prototype_Folder import token_optimizer as topt
@@ -17,7 +18,6 @@ from .product_generation.image_gen_hf import generate_image as generate_image_hf
 from .product_generation.cornerstone_page_generator import (
     get_template,
     export_cornerstone_layout,
-    attach_product_image,
 )
 from .product_generation.cornerstone_renderer import write_preview
 from .product_generation.preview_server import ensure_server
@@ -27,10 +27,14 @@ litellm.drop_params = True
 
 PREVIEW_DIR = os.path.join(tempfile.gettempdir(), "cornerstone_preview")
 
-# One session-wide savings tracker + response cache, shared across every
-# generate/edit call so the report shows cumulative savings.
 TRACKER = topt.SavingsTracker()
 CONCEPT_CACHE = topt.ResponseCache(threshold=0.94)
+
+
+class Page:
+    def __init__(self, template, page_id=None):
+        self.template = template
+        self.page_id = page_id or uuid.uuid4().hex[:12]
 
 
 # ============================================================
@@ -99,6 +103,7 @@ def cached_generate_concept(product_description):
     normalized = topt.normalize(product_description)
     before_tokens = topt.count_tokens(product_description)
 
+    TRACKER.calls += 1
     cached, kind = CONCEPT_CACHE.get(normalized)
     if cached is not None:
         TRACKER.cache_hits += 1
@@ -119,36 +124,19 @@ def cached_generate_concept(product_description):
 
 
 # ============================================================
-# Component routing for free-text change requests (no LLM spent on this)
-# ============================================================
-
-def pick_target_component(template, instruction):
-    """Cheap keyword-overlap routing: picks the single component most likely
-    referenced by the user's change request, so edit_component() only ever
-    sends ONE component's JSON to the model instead of the whole page."""
-    tokens = set(re.findall(r"[a-z0-9']+", (instruction or "").lower()))
-    best_id, best_score = None, -1
-    for c in template.components:
-        haystack = f"{c.type} {c.id} {c.heading} {c.body}"
-        htoks = set(re.findall(r"[a-z0-9']+", haystack.lower()))
-        score = len(tokens & htoks)
-        if c.type in tokens:
-            score += 5
-        if score > best_score:
-            best_score, best_id = score, c.id
-    return best_id
-
-
-# ============================================================
 # Preview link helper
 # ============================================================
 
-def _build_preview_link(template):
-    path = write_preview(template, PREVIEW_DIR)
+def _build_preview_link(template, page_id):
+    path = write_preview(template, PREVIEW_DIR, filename=f"page_{page_id}.html", page_id=page_id)
     base_url = ensure_server(PREVIEW_DIR)
     filename = os.path.basename(path)
     url = f"{base_url}/{filename}?t={int(time.time())}"
-    return f'<a href="{url}" target="_blank" rel="noopener">Open live preview in browser ↗</a>'
+    return (
+        f'<a href="{url}" target="_blank" rel="noopener">Open live preview in browser ↗</a>'
+        f'<iframe src="{url}" title="Live preview" '
+        f'style="width:100%;height:640px;border:1px solid #ddd;border-radius:8px;margin-top:10px;"></iframe>'
+    )
 
 
 def _layout_instructions(layout_style, spacing, tone, color_scheme):
@@ -162,6 +150,29 @@ def _layout_instructions(layout_style, spacing, tone, color_scheme):
     if color_scheme:
         parts.append(f"Color scheme preference: {color_scheme}.")
     return " ".join(parts)
+
+
+def _build_image_inventory(product_rag, theme_rag):
+    """Combines the images pulled out of both RAG passes (product docs +
+    brand/theme docs) into one captioned inventory the layout model can pick
+    from via `image_ref`, instead of the pipeline only ever being able to
+    hardcode a single hero image."""
+    images = []
+    for i, path in enumerate(product_rag["image_paths"], start=1):
+        images.append({
+            "id": f"product_image_{i}",
+            "path": path,
+            "caption": product_rag["image_captions"].get(path, ""),
+            "source": "product upload",
+        })
+    for i, path in enumerate(theme_rag["image_paths"], start=1):
+        images.append({
+            "id": f"theme_image_{i}",
+            "path": path,
+            "caption": theme_rag["image_captions"].get(path, ""),
+            "source": "brand/theme upload",
+        })
+    return images
 
 
 def generate_product_page(
@@ -213,6 +224,7 @@ def generate_product_page(
         TRACKER.add("RAG chunk filtering", product_rag["tokens"] + theme_rag["tokens"])
 
     uploaded_product_images = product_rag["image_paths"]
+    available_images = _build_image_inventory(product_rag, theme_rag)
 
     # 3. Structured product concept (Gemini), cached via token_optimizer's
     #    ResponseCache so repeat/similar descriptions skip the LLM call.
@@ -235,11 +247,17 @@ def generate_product_page(
             ),
         )
     else:
-        decision = check_image_needed(
-            product_description=product_description,
-            industry=industry,
-            key_features=concept.get("key_features"),
-        )
+        try:
+            decision = check_image_needed(
+                product_description=product_description,
+                industry=industry,
+                key_features=concept.get("key_features"),
+            )
+        except Exception as e:
+            decision = ImageNeedDecision(
+                needs_image=True,
+                reason=f"Image-need check failed ({e}); defaulting to image generation.",
+            )
 
     image_path = None
     if decision.needs_image:
@@ -285,6 +303,7 @@ def generate_product_page(
             key=mistral_key,
             layout_instructions=layout_instr,
             reference_notes=reference_notes,
+            available_images=available_images,
         )
     except Exception as e:
         return prompt, "", "", f"Layout generation failed: {e}", None
@@ -292,94 +311,88 @@ def generate_product_page(
     if cached:
         TRACKER.add("layout template cache", topt.count_tokens(template.model_dump_json()))
 
+    # The model may already have assigned one of the RAG images to the
+    # product_visual component(s) via `image_ref` (resolved inside
+    # get_template). Only fall back to the generated/uploaded hero image for
+    # product_visual components that don't already have one, so we never
+    # clobber a deliberate RAG image choice.
+    images_used = sum(1 for c in template.components if (c.content or {}).get("image"))
     if image_path:
-        layout_json = attach_product_image(export_cornerstone_layout(template), image_path)
-        # keep the in-memory template consistent with the JSON we just returned,
-        # so a later "request changes" edit starts from the same state
         for c in template.components:
-            if c.type == "product_visual":
+            if c.type == "product_visual" and not (c.content or {}).get("image"):
                 c.content = {**(c.content or {}), "image": image_path}
-    else:
-        layout_json = export_cornerstone_layout(template)
+                images_used += 1
+    layout_json = export_cornerstone_layout(template)
 
-    preview_link_html = _build_preview_link(template)
+    page = Page(template)
+    preview_link_html = _build_preview_link(template, page.page_id)
 
     report_lines = [
         f"**Image decision:** {'generated' if (image_path and decision.needs_image) else ('reused upload' if image_path else 'skipped')} — {decision.reason}",
         f"**Layout template:** {'cache hit (0 tokens)' if cached else 'new AI generation'}",
-        f"**RAG:** {len(uploaded_product_images)} product image(s), "
-        f"{'text context found' if reference_notes else 'no text context found'} in uploaded files.",
+        f"**RAG:** {len(available_images)} reference image(s) available "
+        f"({len(uploaded_product_images)} product, {len(available_images) - len(uploaded_product_images)} brand/theme); "
+        f"{images_used} used on the page. "
+        f"{'Text context found' if reference_notes else 'No text context found'} in uploaded files.",
         "",
         "**Session token savings (token_optimizer):**",
         TRACKER.report(),
     ]
-    return prompt, layout_json, preview_link_html, "\n\n".join(report_lines), template
+    return prompt, layout_json, preview_link_html, "\n\n".join(report_lines), page
 
 
 # ============================================================
 # "Tell the AI about changes" — diff-based edit on the live template
 # ============================================================
 
-def apply_change_request(instruction, template):
+def apply_reorder(order_json, page):
     """
-    Called by the "Apply Changes" button. Routes the free-text instruction to
-    the single most relevant component (no LLM call spent on routing) and
-    sends ONLY that component to the cheap edit model — the diff-edit pattern
-    from cornerstone_layout_generator.py / page_generator.py, which is the
-    single biggest per-edit token saving in this project.
+    Called whenever the user drags a section in the Live Preview to a new
+    spot. `order_json` is a JSON-encoded list of component ids in their new
+    order (produced client-side by the drag-and-drop script embedded in the
+    rendered preview — see cornerstone_renderer.py). This just rewrites
+    template.components to match; no LLM call, no tokens spent.
     """
-    if template is None:
-        return "", "", "Generate a page first, then request changes to it.", None
+    if page is None:
+        return "", "", "Generate a page first, then drag its sections to reorder them.", None
 
-    if not instruction or not instruction.strip():
-        return (
-            export_cornerstone_layout(template),
-            _build_preview_link(template),
-            "Enter a change request first.",
-            template,
-        )
+    template = page.template
 
-    mistral_key = os.environ.get("MISTRAL_API_KEY", "")
-    if not mistral_key:
-        return (
-            export_cornerstone_layout(template),
-            _build_preview_link(template),
-            "Missing MISTRAL_API_KEY — cannot apply the edit.",
-            template,
-        )
-
-    target_id = pick_target_component(template, instruction)
-
-    whole_tokens = topt.count_tokens(template.model_dump_json())
     try:
-        updated = edit_component(template, target_id, instruction, mistral_key)
-    except Exception as e:
+        new_order = json.loads(order_json) if order_json else []
+    except (TypeError, ValueError):
+        new_order = []
+
+    if not new_order:
         return (
             export_cornerstone_layout(template),
-            _build_preview_link(template),
-            f"Edit failed: {e}",
-            template,
+            _build_preview_link(template, page.page_id),
+            "No reorder detected.",
+            page,
         )
 
-    edited_component = next(c for c in updated.components if c.id == target_id)
-    sent_tokens = topt.count_tokens(edited_component.model_dump_json())
-    TRACKER.add("diff edits", max(whole_tokens - sent_tokens, 0))
+    by_id = {c.id: c for c in template.components}
+    reordered = [by_id[cid] for cid in new_order if cid in by_id]
+    # Anything not present in new_order (e.g. a stale id from an older
+    # render) is kept, appended in its original order, so a section can
+    # never silently vanish from the page because of a drag event.
+    seen = set(new_order)
+    reordered += [c for c in template.components if c.id not in seen]
+    template.components = reordered
 
-    layout_json = export_cornerstone_layout(updated)
-    preview_link_html = _build_preview_link(updated)
+    updated_page = Page(template, page_id=page.page_id)
 
-    report = (
-        f"Applied your change to the **`{target_id}`** component only "
-        f"(diff edit — sent {sent_tokens} tokens instead of the whole "
-        f"{whole_tokens}-token page).\n\n"
-        "**Session token savings (token_optimizer):**\n" + TRACKER.report()
+    layout_json = export_cornerstone_layout(template)
+    preview_link_html = _build_preview_link(template, updated_page.page_id)
+    report = "Reordered sections via drag-and-drop: " + " → ".join(
+        c.id for c in template.components
     )
-    return layout_json, preview_link_html, report, updated
+    return layout_json, preview_link_html, report, updated_page
 
 
 if __name__ == "__main__":
     app = build_ui(
         generate_fn=generate_product_page,
-        apply_change_fn=apply_change_request,
+        reorder_fn=apply_reorder,
     )
-    app.launch()
+    app.launch(head=REORDER_BRIDGE_HEAD)

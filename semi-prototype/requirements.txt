@@ -1,0 +1,12 @@
+gradio
+litellm
+instructor
+pydantic
+google-genai
+python-dotenv
+huggingface_hub
+rank_bm25
+tiktoken
+pypdf
+fastapi
+uvicorn

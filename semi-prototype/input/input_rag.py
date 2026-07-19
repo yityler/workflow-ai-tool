@@ -10,7 +10,7 @@ TEXT_EXTENSIONS = (".txt", ".md")
 
 _CAPTION_MODEL = "gemini-3.5-flash"
 _caption_client = None
-_caption_cache = {}  # path -> caption, so re-uploading/regenerating doesn't re-call the model
+_caption_cache = {}  
 
 
 def _get_caption_client():
@@ -100,7 +100,6 @@ def analyze_files(query, files):
             text_chunks.extend(_chunk_text(_read_pdf_file(path)))
         elif ext in TEXT_EXTENSIONS:
             text_chunks.extend(_chunk_text(_read_text_file(path)))
-        # other extensions: silently skipped (not a supported doc type)
 
     image_captions = {p: _caption_image(p) for p in image_paths}
 
@@ -113,13 +112,11 @@ def analyze_files(query, files):
             bm25 = BM25Okapi([tokenize(c) for c in text_chunks])
             scores = bm25.get_scores(tokenize(query or ""))
             scored = sorted(zip(scores, text_chunks), key=lambda x: x[0], reverse=True)
-            # token_optimizer: keep only chunks that actually score well, not a fixed top-k
             selected = topt.filter_chunks(scored, min_ratio=0.35, max_keep=5)
         except Exception:
-            selected = text_chunks[:3]  # fallback if rank_bm25 isn't available
+            selected = text_chunks[:3]
 
         combined = "\n\n".join(selected)
-        # token_optimizer: learned compression on the input side for long context blocks
         if topt.count_tokens(combined) > 400:
             combined = topt.compress(combined, rate=0.6)
         text_context = topt.normalize(combined)

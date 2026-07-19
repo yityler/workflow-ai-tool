@@ -5,14 +5,17 @@ and generates a product image using Hugging Face FLUX.
 """
 
 import os
+import tempfile
+import uuid
 from dotenv import load_dotenv
 from huggingface_hub import InferenceClient
 
-from ..input.input_build_prompt import build_prompt
+from ..input.input_build_prompt_image import build_prompt_image
 
 load_dotenv()
 
 IMAGE_MODEL = "black-forest-labs/FLUX.1-schnell"
+IMAGE_OUTPUT_DIR = os.path.join(tempfile.gettempdir(), "cornerstone_generated_images")
 
 _client = None
 
@@ -55,7 +58,7 @@ def generate_image(
     extra_notes=None,
     product_files=None,
     theme_files=None,
-    output_path="product_image.png"
+    output_path=None,
 ):
     """
     1. Calls build_prompt() to generate the product concept.
@@ -64,8 +67,8 @@ def generate_image(
     4. Saves the generated image.
     """
 
-    # Step 1: Get product concept from Ozzy's build_prompt
-    product_concept, error = build_prompt(
+    # Step 1: Get product concept from Ozzy's build_prompt_image
+    product_concept, error = build_prompt_image(
         product_description=product_description,
         industry=industry,
         target_audience=target_audience,
@@ -110,6 +113,10 @@ Requirements:
 
 
     # Step 4: Save image
+    if output_path is None:
+        os.makedirs(IMAGE_OUTPUT_DIR, exist_ok=True)
+        output_path = os.path.join(IMAGE_OUTPUT_DIR, f"{uuid.uuid4().hex}.png")
+
     image.save(output_path)
 
     return output_path
